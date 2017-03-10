@@ -26,7 +26,7 @@ class RasterMetadata:
         self.cols = cols
 
     def __eq__(self, other: 'RasterMetadata') -> bool:
-        # FIXME: Não compara a projeção
+        # Estas 3 linhas garantem a comparação correta da referência espacial.
         spatial_self = osr.SpatialReference(self.proj)
         spatial_other = osr.SpatialReference(other.proj)
         same_spatial = spatial_self.IsSame(spatial_other)
@@ -34,8 +34,7 @@ class RasterMetadata:
         return (self.rows == other.rows and
                 self.cols == other.cols and
                 self.block_size == other.block_size and
-                self.x_origem == other.x_origem and
-                self.y_origem == other.y_origem and
+                self.origem == other.origem and
                 self.pixel_size == other.pixel_size and
                 same_spatial)
 
@@ -192,12 +191,8 @@ class RasterData:
         block_position = self.block_list[block_index]
         block_coords = np.empty(self.block_indices.shape)
         for eixo in range(self.block_indices.shape[0]):
-            # TODO: Converter para array.
-            c = self.block_indices[eixo] + (block_position[eixo] * self.meta.pixel_size) + self.meta.origem[eixo]
-
-
-
-            block_coords[eixo] = c
+            coords = self.block_indices[eixo] * self.meta.pixel_size + self.meta.origem[eixo] + block_position[eixo] * self.meta.pixel_size
+            block_coords[eixo] = coords
         return block_coords
 
     def write_block(self, data_array: np.ndarray, block_index: int, banda: int=1):
