@@ -3,6 +3,7 @@ import cv2
 import osr
 from rasterdata import RasterData
 import matplotlib.pylab as plt
+import numpy as np
 
 #
 #
@@ -28,4 +29,10 @@ def test_coords():
         print(coords)
 
 
-test_coords()
+# test_coords()
+
+a = np.asarray([1, 2, 3])
+b = np.asarray([11, 22, 33])
+
+c = np.dstack((a, b))
+print(c)
