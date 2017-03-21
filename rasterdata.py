@@ -152,6 +152,24 @@ class RasterData:
             block_data = src_band.ReadAsArray(*block)
             yield block_data
 
+    def get_rgb_iterator(self, stack: bool=True ) -> Iterator:
+        """Retorna um iterator sobre os 3 canais (RGB)
+        
+        :param stack: Empilha os canais em uma matriz (w, h, 3).
+        """
+        # FIXME: Em vez de repetir o código, apenas chamar o get iterator para cada banda.
+        blocks_list = self.block_list
+        red_channel = self.gdal_dataset.GetRasterBand(1)
+        green_channel = self.gdal_dataset.GetRasterBand(1)
+        blue_channel = self.gdal_dataset.GetRasterBand(1)
+
+        for block in blocks_list:
+            red_block_data = red_channel.ReadAsArray(*block)
+            green_block_data = green_channel.ReadAsArray(*block)
+            blue_block_data = blue_channel.ReadAsArray(*block)
+            yield red_block_data, green_block_data, blue_block_data
+
+
     def clone_empty(self, new_img_file: str, bandas: int=0, data_type=gdal.GDT_Byte) -> 'RasterData':
         """Cria uma nova imagem RasterData com as mesmas características desta imagem,
         a nova imagem é vazia e pronta para a escrita.
