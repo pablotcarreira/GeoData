@@ -6,6 +6,8 @@ import osr
 import numpy as np
 
 
+print("ATENÇÃO - rasterdata")
+
 class RasterMetadata:
     """Metadados sobre uma imagem raster.
 
@@ -138,12 +140,15 @@ class RasterData:
     def get_iterator(self, banda: int=1) -> Iterator:
         """Retorna um iterator sobre a imagem, retornando um pedaço do
         tamanho do block size a cada passo.
+        
+        Notar que os blocos são enviados em ordem diferente do numpy.
 
         :param banda: Banda da imagem para gerar o iterator.
         """
         blocks_list = self.block_list
         src_band = self.gdal_dataset.GetRasterBand(banda)
-        for index, block in enumerate(blocks_list, 1):
+        for block in blocks_list:
+            # print("Block from list: {}".format(block))
             block_data = src_band.ReadAsArray(*block)
             yield block_data
 
