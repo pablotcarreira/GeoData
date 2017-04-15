@@ -46,12 +46,13 @@ class RasterData:
     _block_list = None
     _block_indices = None
 
-    def __init__(self, img_file: str, write_enabled: bool=False):
+    def __init__(self, img_file: str, write_enabled: bool=False, verbose: bool=False):
         """
         :param img_file: Caminho para o arquivo tiff da imagem.
         :param write_enabled: Habilita a escrita para o arquivo. 
         """
         #: Caminho para o arquivo tiff da imagem (fonte de dados).
+        self.verbose=verbose
         self.img_file = img_file
         self.write_enabled = write_enabled
         self.src_image = img_file
@@ -88,24 +89,24 @@ class RasterData:
         self.meta.proj = gdal_dataset.GetProjection()
 
         geot = gdal_dataset.GetGeoTransform()
-        print(geot)
         self.meta.origem = (geot[0], geot[3])
         self.meta.pixel_size = geot[1]
 
         src_band = gdal_dataset.GetRasterBand(1)
         self.meta.block_size = src_band.GetBlockSize()
-
-        print("Image shape {}x{}px. ".format(self.meta.cols, self.meta.rows))
-        print("Origem: {}m , {}m.".format(round(self.meta.origem[0], 2), round(self.meta.origem[1], 2)))
-        print("Resolucao: {}m.".format(round(self.meta.pixel_size, 2)))
-        print("Bandas: {}".format(self.meta.n_bandas))
-        print("Projecao: \n {}".format(self.meta.proj))
+        if self.verbose:
+            print("Image shape {}x{}px. ".format(self.meta.cols, self.meta.rows))
+            print("Origem: {}m , {}m.".format(round(self.meta.origem[0], 2), round(self.meta.origem[1], 2)))
+            print("Resolucao: {}m.".format(round(self.meta.pixel_size, 2)))
+            print("Bandas: {}".format(self.meta.n_bandas))
+            print("Projecao: \n {}".format(self.meta.proj))
 
         # Informações por banda.
         for item in range(self.meta.n_bandas):
             src_band = gdal_dataset.GetRasterBand(item + 1)
             src_block_size = src_band.GetBlockSize()
-            print("Banda {} - Block shape {}x{}px.".format(item + 1, *src_block_size))
+            if self.verbose:
+                print("Banda {} - Block shape {}x{}px.".format(item + 1, *src_block_size))
 
     def _create_blocks_list(self):
         """Cretes a list of block reading coordinates."""
