@@ -1,12 +1,10 @@
 # Pablo Carreira - 08/03/17
-from typing import Iterator, overload, List
+from typing import Iterator, overload, List, Tuple
 
 import gdal
 import osr
 import numpy as np
 
-
-print("ATENÇÃO - rasterdata")
 
 class RasterMetadata:
     """Metadados sobre uma imagem raster.
@@ -40,6 +38,13 @@ class RasterMetadata:
                 self.pixel_size == other.pixel_size and
                 same_spatial)
 
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """Image shape (rows, cols).
+        Across this program, shapes are aways in "C order": rows x cols, or Y x X or H x W. 
+        """
+        return self.rows, self.cols
+
 
 class RasterData:
     """Representa uma matriz raster com características espaciais."""
@@ -58,6 +63,11 @@ class RasterData:
         self.src_image = img_file
         self.meta = RasterMetadata()
         self._load_metadata()
+
+    def calcular_redimensonsamento(self, padding: int=94, block_shape: Tuple=(256, 256)):
+        """Shapes are awais in (rows, cols)"""
+        img_shape = self.meta.shape
+
 
     # noinspection PyTypeChecker
     @property
@@ -168,7 +178,10 @@ class RasterData:
             red_block_data = red_channel.ReadAsArray(*block)
             green_block_data = green_channel.ReadAsArray(*block)
             blue_block_data = blue_channel.ReadAsArray(*block)
-            yield red_block_data, green_block_data, blue_block_data
+            if stack:
+                yield np.dstack((red_block_data, green_block_data, blue_block_data))
+            else:
+                yield red_block_data, green_block_data, blue_block_data
 
 
     def clone_empty(self, new_img_file: str, bandas: int=0, data_type=gdal.GDT_Byte) -> 'RasterData':
