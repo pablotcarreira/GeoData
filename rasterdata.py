@@ -64,10 +64,20 @@ class RasterData:
         self.meta = RasterMetadata()
         self._load_metadata()
 
-    def calcular_redimensonsamento(self, padding: int=94, block_shape: Tuple=(256, 256)):
-        """Shapes are awais in (rows, cols)"""
-        img_shape = self.meta.shape
-
+    def read_block_by_coordinates(self, yo, ys, xo, xs):
+        """Get a block by coordinates (y0, y1, x0, x1).
+       
+        Returns a RGB block.
+        
+        Remember: Row first!
+        """
+        red_channel = self.gdal_dataset.GetRasterBand(1)
+        green_channel = self.gdal_dataset.GetRasterBand(2)
+        blue_channel = self.gdal_dataset.GetRasterBand(3)
+        red_block_data = red_channel.ReadAsArray(xo, yo, xs, ys)
+        green_block_data = green_channel.ReadAsArray(xo, yo, xs, ys)
+        blue_block_data = blue_channel.ReadAsArray(xo, yo, xs, ys)
+        return np.dstack((red_block_data, green_block_data, blue_block_data))
 
     # noinspection PyTypeChecker
     @property
@@ -171,8 +181,8 @@ class RasterData:
         # FIXME: Em vez de repetir o código, apenas chamar o get iterator para cada banda.
         blocks_list = self.block_list
         red_channel = self.gdal_dataset.GetRasterBand(1)
-        green_channel = self.gdal_dataset.GetRasterBand(1)
-        blue_channel = self.gdal_dataset.GetRasterBand(1)
+        green_channel = self.gdal_dataset.GetRasterBand(2)
+        blue_channel = self.gdal_dataset.GetRasterBand(3)
 
         for block in blocks_list:
             red_block_data = red_channel.ReadAsArray(*block)
