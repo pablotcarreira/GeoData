@@ -6,6 +6,7 @@ import numpy as np
 from rasterdata import RasterData
 from random import Random
 
+
 def create_blocks_coordinates_array(blk_shape, img_shape):
     # Quantos blocos inteiros cabem, quantos pixels sobram
     n_block_rows, resto_pixel_rows = divmod(img_shape[0], blk_shape[0])
@@ -16,7 +17,7 @@ def create_blocks_coordinates_array(blk_shape, img_shape):
     n_block_cols += 1
 
     # Primeiro, cria a matriz de escrita, o bloco tem o tamanho do blk_shape.
-    matriz_de_escrita = np.empty((n_block_rows, n_block_cols, 2), dtype=np.uint16)
+    matriz_de_escrita = np.empty((n_block_rows, n_block_cols, 4), dtype=np.uint16)
     for row_index in range(n_block_rows):
         if row_index + 1 == n_block_rows:  # Last row.
             valid_y = img_shape[0] - row_index * blk_shape[0]
@@ -30,8 +31,6 @@ def create_blocks_coordinates_array(blk_shape, img_shape):
                 valid_x = blk_shape[1]
             x_offset = col_index * blk_shape[1]
             matriz_de_escrita[row_index][col_index] = [y_offset, valid_y, x_offset, valid_x]
-
-    print(matriz_de_escrita)
     return matriz_de_escrita
 
 
@@ -113,7 +112,7 @@ def mirror_block(block_data: np.ndarray, padding: int, direction: str):
 
 
 def create_block_iterator(raster_data: RasterData, block_position_array: np.ndarray,
-                          padding: int, block_indices: List[Tuple[int, int]]) -> Generator[np.ndarray]:
+                          padding: int, block_indices: List[Tuple[int, int]]) -> Generator:
     """ Cria o iterator para os blocos, em sequencia ou de forma randomica.
 
     :param raster_data: 
@@ -157,7 +156,7 @@ def create_block_iterator(raster_data: RasterData, block_position_array: np.ndar
             # Ultima coluna, completa e pega o padding do bloco da esquerda.
             yo, vy, xo, vx = block_coordinates
             block_coordinates = [yo - dif_last_col - padding, vy, xo, vx]
-            valid_data[3] +=resto_pixel_cols
+            valid_data[3] += resto_pixel_cols
 
         elif col_index + 1 != n_block_cols and col_index != 0:
             # Nem a ultima nem a primeira coluna. Pega o padding do bloco da direita e da esquerda.
@@ -180,8 +179,7 @@ def create_block_iterator(raster_data: RasterData, block_position_array: np.ndar
             valid_data[3] += blk_shape[1]
         elif col_index + 1 == n_block_cols:  # Ultima coluna. Espelha para a direita.
             block_data = mirror_block(block_data, padding, MIRROR_RIGHT)
-
-        yield block_data, valid_data
+        yield block_data, valid_data, block_coordinates
 
 
 def fake_neural_net_padding_crop(image, padding):
@@ -191,11 +189,14 @@ def fake_neural_net_padding_crop(image, padding):
 def cut_valid_data(block_data, valid_region):
     return block_data[valid_region[0]:valid_region[1], valid_region[2]:valid_region[3]]
 
-def write_block(raster_data, block_data, region):
-    block_position = raster_data.block_list[block_index]
-    raster_data.gdal_dataset.GetRasterBand(banda).WriteArray(data_array, block_position[0], block_position[1])
+
+def write_block(raster_data: RasterData, block_data: np.ndarray, block_position: Tuple):
+    # loop para escrever todas as bandas.
+    for b in range(raster_data.meta.n_bandas):
+        band_data = block_data[...,b]
+        # FIXME: Avredito que o GDAL utilize column first.
+        raster_data.gdal_dataset.GetRasterBand(b + 1).WriteArray(band_data, block_position[2], block_position[0])
     raster_data.gdal_dataset.FlushCache()
-    pass
 
 
 if __name__ == '__main__':
@@ -207,34 +208,25 @@ if __name__ == '__main__':
     img_padding = 15
 
     # Pega o resterdata e executa os passos até o iterator (1-5)
-    img = RasterData("samples/Paprika-ilustr.jpg")  # 1
+    img = RasterData("/home/pablo/Desktop/geo_array/_dev/samples/Paprika-ilustr.tiff")  # 1
     img.meta.block_size = nn_output
     matriz_de_coordenadas = create_blocks_coordinates_array(blk_shape=nn_output, img_shape=img.meta.shape)  # 2
-    indices = generate_indices(matriz_de_coordenadas)  # 3
-    indices_selected, indices_not_selected = sample_block_indices(indices, 0.6)  # 4
+    indices_matriz = generate_indices(matriz_de_coordenadas)  # 3
+    indices_selected, indices_not_selected = sample_block_indices(indices_matriz, 0.6)  # 4
     block_iterator_selected = create_block_iterator(img, matriz_de_coordenadas, img_padding, indices_selected)  # 5
     block_iterator_not_selected = create_block_iterator(img, matriz_de_coordenadas, img_padding, indices_not_selected)
 
     # Cria as imagens de saída (7)
-    saida_selecionado = img.clone_empty("/home/pablo/Desktop/geo_array/_dev/out/selecionado.jpg")
-    saida_nao_selecionado = img.clone_empty("/home/pablo/Desktop/geo_array/_dev/out/nao_selecionado.jpg")
+    saida_selecionado = img.clone_empty("/home/pablo/Desktop/geo_array/_dev/out/selecionado.tif")
+    saida_nao_selecionado = img.clone_empty("/home/pablo/Desktop/geo_array/_dev/out/nao_selecionado.tif")
 
     # Roda os iterators e escreve (8-10)
-    for bloco, valid_data in block_iterator_selected:
+    for bloco, valid_data, block_position in block_iterator_selected:
         saida = fake_neural_net_padding_crop(bloco, img_padding)
         saida = cut_valid_data(saida, valid_data)
+        write_block(img, saida, block_position)
 
-        # Write.
-
-
-    for bloco, valid_data in block_iterator_not_selected:
+    for bloco, valid_data, block_position in block_iterator_not_selected:
         saida = fake_neural_net_padding_crop(bloco, img_padding)
         saida = cut_valid_data(saida, valid_data)
-
-
-
-
-
-
-
-
+        write_block(img, saida, block_position)
