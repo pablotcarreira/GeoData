@@ -193,7 +193,6 @@ class RasterData:
             else:
                 yield red_block_data, green_block_data, blue_block_data
 
-
     def clone_empty(self, new_img_file: str, bandas: int=0, data_type=gdal.GDT_Byte) -> 'RasterData':
         """Cria uma nova imagem RasterData com as mesmas características desta imagem,
         a nova imagem é vazia e pronta para a escrita.
