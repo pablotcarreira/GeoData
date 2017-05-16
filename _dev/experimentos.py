@@ -87,7 +87,7 @@ def mirror_block(block_data: np.ndarray, padding: int, direction: str):
 
 
 def create_block_iterator(raster_data: RasterData, block_position_array: np.ndarray,
-                          padding: int, block_indices: List[Tuple[int]]) -> Generator[np.ndarray]:
+                          padding: int, block_indices: List[Tuple[int, int]]) -> Generator[np.ndarray]:
     """ Cria o iterator para os blocos, em sequencia ou de forma randomica.
 
     :param raster_data: 
@@ -127,7 +127,7 @@ def create_block_iterator(raster_data: RasterData, block_position_array: np.ndar
             block_coordinates = [yo - padding, vy + padding, xo, vx]
 
         # Agora pega o bloco.
-        block_data = raster_data.read_block_by_coordinates(block_coordinates)
+        block_data = raster_data.read_block_by_coordinates(*block_coordinates)
 
         # E fazemos os espelhamentos para os casos especificos.
         if row_index == 0:  # 1a linha. Espelha para cima.
