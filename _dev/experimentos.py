@@ -1,7 +1,7 @@
 # Pablo Carreira - 12/05/17
 
 # Mirroring and padding
-from typing import List, Tuple, Generator, Sequence
+from typing import List, Tuple, Generator, Sequence, Iterator
 import numpy as np
 from rasterdata import RasterData
 from random import Random
@@ -15,26 +15,29 @@ def create_blocks_coordinates_array(blk_shape, img_shape):
     # Quantos blocos inteiros cabem, quantos pixels sobram
     n_block_rows, resto_pixel_rows = divmod(img_shape[0], blk_shape[0])
     n_block_cols, resto_pixel_cols = divmod(img_shape[1], blk_shape[1])
-
-    # Quantos blocos cabem, contando os pedacos no final.
-    n_block_rows += 1
-    n_block_cols += 1
+    # Caso haja um pedaço sobrando do final, inclui mais um bloco.
+    if resto_pixel_rows != 0:
+        n_block_rows += 1
+    if resto_pixel_cols != 0:
+        n_block_cols += 1
 
     # Primeiro, cria a matriz de escrita, o bloco tem o tamanho do blk_shape.
     matriz_de_escrita = np.empty((n_block_rows, n_block_cols, 4), dtype=np.uint16)
     for row_index in range(n_block_rows):
+        y0 = row_index * blk_shape[0]
         if row_index + 1 == n_block_rows:  # Last row.
-            valid_y = img_shape[0] - row_index * blk_shape[0]
+            y1 = img_shape[0]
         else:
-            valid_y = blk_shape[0]
-        y_offset = row_index * blk_shape[0]
+            y1 = blk_shape[0] * (row_index + 1)
+
         for col_index in range(n_block_cols):
+            x0 = col_index * blk_shape[1]
             if col_index + 1 == n_block_cols:  # Last column.
-                valid_x = img_shape[1] - col_index * blk_shape[1]
+                x1 = img_shape[1]
             else:
-                valid_x = blk_shape[1]
-            x_offset = col_index * blk_shape[1]
-            matriz_de_escrita[row_index][col_index] = [y_offset, valid_y + y_offset, x_offset, valid_x + x_offset]
+                x1 = blk_shape[1] * (col_index + 1)
+
+            matriz_de_escrita[row_index][col_index] = [y0, y1, x0, x1]
     return matriz_de_escrita
 
 
@@ -109,13 +112,12 @@ def mirror_block(block_data: np.ndarray, padding: int, direction: str):
     elif direction == MIRROR_LEFT:
         if padding > block_data.shape[1]:
             raise ValueError(error_message)
-        mirrored = np.fliplr(block_data[..., :padding])
+        mirrored = np.fliplr(block_data[:, :padding])
         return np.hstack((mirrored, block_data))
     elif direction == MIRROR_RIGHT:
         if padding > block_data.shape[1]:
             raise ValueError(error_message)
-        s = block_data[..., -padding:]
-        mirrored = np.fliplr(s)
+        mirrored = np.fliplr(block_data[:, -padding:])
         return np.hstack((block_data, mirrored))
     else:
         AttributeError('Direction must be one of [top, bottom, left, right] got: {}.'.format(direction))
@@ -124,13 +126,13 @@ def mirror_block(block_data: np.ndarray, padding: int, direction: str):
 def create_block_iterator(raster_data: RasterData,
                           block_coordinates: np.ndarray,
                           block_indices: List[Tuple[int, int]],
-                          block_shape: Sequence[int, int],
+                          block_shape: Sequence[int],
                           padding: int,
-                          ) -> Generator:
+                          ) -> Iterator[Tuple[np.ndarray, List, List]]:
     """Creates a generator that yelds image blocks with an extra padding around it.
    
     :param raster_data: The image RasterData.
-    :param block_coordinates: The coordinates of the image blocks.
+    :param a_block_coordinates: The coordinates of the image blocks.
     :param block_indices: The indices of the blocks, passing the indices allows to iterate over specific blocks.
     :param block_shape: The shape of the blocks without the padding.
     :param padding: The size in pixels of the padding.     
@@ -144,56 +146,83 @@ def create_block_iterator(raster_data: RasterData,
     # Number of pixels needed to complete the last row and the last column.
     dif_last_row = block_shape[0] - resto_pixel_rows
     dif_last_col = block_shape[1] - resto_pixel_cols
+    # If those number are equal to the block size, this means that nothing is missing.
+    if dif_last_row == block_shape[0]:
+        dif_last_row = 0
+    if dif_last_col == block_shape[1]:
+        dif_last_col = 0
+    # Caso haja um pedaço sobrando do final, inclui mais um bloco.
+    # FIXME: Muito deselegante, pegar o numero de blocos do shape do block_coordinates.
+    if resto_pixel_rows != 0:
+        n_block_rows += 1
+    if resto_pixel_cols != 0:
+        n_block_cols += 1
 
-    # Position of the data that is valid for write (excludes padding and block completion).
-    # [y_offset, y_size, x_offset, x_size]
-    block_valid_data = [padding] * 4
+    double_padding = 2 * padding  # Padding on both sizes is equal to...
+    expected_shape = (block_shape[0] + double_padding, block_shape[1] + double_padding)
 
     for index in block_indices:
+        # Position of the data that is valid for write (excludes padding and block completion).
+        # [vy0, vy1, vx0, vx1]
+        block_valid_data = [0, block_shape[0], 0, block_shape[1]]
+
         row_index, col_index = index
-        block_coordinates = block_coordinates[row_index, col_index]
+        a_block_coordinates = block_coordinates[row_index, col_index]
 
         if row_index + 1 == n_block_rows:
             # Ultima linha. Completa o que falta e pega o padding dos blocos de cima.
-            yo, vy, xo, vx = block_coordinates
-            block_coordinates = [yo, vy, xo - dif_last_row - padding, vx]
-            block_valid_data[1] += resto_pixel_rows
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0 - dif_last_row - padding, y1, x0, x1]
+            block_valid_data[1] -= resto_pixel_rows
 
         elif row_index + 1 != n_block_rows and row_index != 0:
             # Não é ultima linha, nem a primeira, pega o padding do bloco de cima e de baixo.
-            yo, vy, xo, vx = block_coordinates
-            block_coordinates = [yo, vy, xo - padding, vx + padding]
-            block_valid_data[1] += block_shape[0]
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0 - padding, y1 + padding, x0, x1]
 
         if col_index + 1 == n_block_cols:
             # Ultima coluna, completa e pega o padding do bloco da esquerda.
-            yo, vy, xo, vx = block_coordinates
-            block_coordinates = [yo - dif_last_col - padding, vy, xo, vx]
-            block_valid_data[3] += resto_pixel_cols
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0, y1, x0 - dif_last_col - padding, x1]
+            block_valid_data[3] = block_valid_data[3] - resto_pixel_cols
 
         elif col_index + 1 != n_block_cols and col_index != 0:
             # Nem a ultima nem a primeira coluna. Pega o padding do bloco da direita e da esquerda.
-            yo, vy, xo, vx = block_coordinates
-            block_coordinates = [yo - padding, vy + padding, xo, vx]
-            block_valid_data[3] += block_shape[1]
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0, y1, x0 - padding, x1 + padding]
+
+        if row_index == 0:
+            # Primeira linha, adiciona o padding do bloco de baixo.
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0, y1 + padding, x0, x1]
+
+        if col_index == 0:
+            # Primeira coluna, adiciona o padding do bloco da direita.
+            y0, y1, x0, x1 = a_block_coordinates
+            a_block_coordinates = [y0, y1, x0, x1 + padding]
 
         # Agora pega o bloco.
-
-        block_data = raster_data.read_block_by_coordinates(*block_coordinates)
+        block_data = raster_data.read_block_by_coordinates(*a_block_coordinates)
 
         # E fazemos os espelhamentos para os casos especificos.
         if row_index == 0:  # 1a linha. Espelha para cima.
             block_data = mirror_block(block_data, padding, MIRROR_TOP)
-            block_valid_data[1] += block_shape[0]
         elif row_index + 1 == n_block_rows:  # Ultima linha. Espelha para baixo.
             block_data = mirror_block(block_data, padding, MIRROR_BOTTOM)
 
         if col_index == 0:  # 1a coluna. Espelha para a esquerda.
             block_data = mirror_block(block_data, padding, MIRROR_LEFT)
-            block_valid_data[3] += block_shape[1]
         elif col_index + 1 == n_block_cols:  # Ultima coluna. Espelha para a direita.
             block_data = mirror_block(block_data, padding, MIRROR_RIGHT)
-        yield block_data, block_valid_data, block_coordinates
+
+
+        if block_data.shape[:2] != expected_shape:
+            raise RuntimeError("""
+                Foi gerado um bloco de tamanho incorreto. 
+                Ver bug referente ao ultimo bloco ser menor que o padding.""")
+
+
+        yield block_data, block_valid_data, a_block_coordinates
 
 
 def fake_neural_net_padding_crop(image, padding):
@@ -201,19 +230,21 @@ def fake_neural_net_padding_crop(image, padding):
 
 
 def cut_valid_data(block_data, valid_region):
+    """Cuts a region of the block."""
+    # FIXME: Poderia ser renomeado para ser um crop genérico.
     return block_data[valid_region[0]:valid_region[1], valid_region[2]:valid_region[3]]
 
 
-def write_block(raster_data: RasterData, block_data: np.ndarray, block_position: Tuple):
+def write_block(output_raster_data: RasterData, block_data: np.ndarray, block_position: Sequence):
     # Cast to integers.
     block_position = [int(p) for p in block_position]
 
     # loop para escrever todas as bandas.
-    for b in range(raster_data.meta.n_bandas):
+    for b in range(output_raster_data.meta.n_bandas):
         band_data = block_data[...,b]
-        # FIXME: Avredito que o GDAL utilize column first.
-        raster_data.gdal_dataset.GetRasterBand(b + 1).WriteArray(band_data, block_position[2], block_position[0])
-    raster_data.gdal_dataset.FlushCache()
+        # FIXME: Acredito que o GDAL utilize column first.
+        output_raster_data.gdal_dataset.GetRasterBand(b + 1).WriteArray(band_data, block_position[2], block_position[0])
+    output_raster_data.gdal_dataset.FlushCache()
 
 
 if __name__ == '__main__':

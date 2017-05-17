@@ -64,26 +64,30 @@ class RasterData:
         self.meta = RasterMetadata()
         self._load_metadata()
 
-    def read_block_by_coordinates(self, yo, ys, xo, xs):
+    def read_block_by_coordinates(self, y0, y1, x0, x1):
         """Get a block by coordinates.
         Returns a RGB block.
         
         Remember: Row first!
          
-        :param yo: Y offset.
-        :param ys: Y size.
-        :param xo: X offset.
-        :param xs: X size.         
+        :param y0: Y start.
+        :param y1: Y end.
+        :param x0: X start.
+        :param x1: X end.         
         """
-        # Make sure the params are ints otherwise gdal woudn't accept it.
-        xo, yo, xs, ys = int(xo), int(yo), int(xs), int(ys)
+        # Make sure the params are ints otherwise gdal won't accept them.
+        x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
+
+        # Gdal takes offset and size instead of start and end, so we convert the parameters.
+        x_size = x1 - x0
+        y_size = y1 - y0
 
         red_channel = self.gdal_dataset.GetRasterBand(1)
         green_channel = self.gdal_dataset.GetRasterBand(2)
         blue_channel = self.gdal_dataset.GetRasterBand(3)
-        red_block_data = red_channel.ReadAsArray(xo, yo, xs, ys)
-        green_block_data = green_channel.ReadAsArray(xo, yo, xs, ys)
-        blue_block_data = blue_channel.ReadAsArray(xo, yo, xs, ys)
+        red_block_data = red_channel.ReadAsArray(x0, y0, x_size, y_size)
+        green_block_data = green_channel.ReadAsArray(x0, y0, x_size, y_size)
+        blue_block_data = blue_channel.ReadAsArray(x0, y0, x_size, y_size)
         return np.dstack((red_block_data, green_block_data, blue_block_data))
 
     # noinspection PyTypeChecker
