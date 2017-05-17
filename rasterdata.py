@@ -65,12 +65,19 @@ class RasterData:
         self._load_metadata()
 
     def read_block_by_coordinates(self, yo, ys, xo, xs):
-        """Get a block by coordinates (y0, y1, x0, x1).
-       
+        """Get a block by coordinates.
         Returns a RGB block.
         
         Remember: Row first!
+         
+        :param yo: Y offset.
+        :param ys: Y size.
+        :param xo: X offset.
+        :param xs: X size.         
         """
+        # Make sure the params are ints otherwise gdal woudn't accept it.
+        xo, yo, xs, ys = int(xo), int(yo), int(xs), int(ys)
+
         red_channel = self.gdal_dataset.GetRasterBand(1)
         green_channel = self.gdal_dataset.GetRasterBand(2)
         blue_channel = self.gdal_dataset.GetRasterBand(3)
