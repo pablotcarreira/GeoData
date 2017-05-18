@@ -58,20 +58,28 @@ def generate_array_indices(array: np.ndarray) -> List:
     return indices
 
 
-def sample_block_indices(array_indices: Sequence, ratio: float, random_seed: str = "abc"):
-    """Filter the indices by a percentage.
+def sample_block_indices(array_indices: Sequence, ratio: float=None, n_samples: int=None, random_seed: str="abc"):
+    """Take samples from an array, by a percentage or by a number of samples.
     
     Elements are taken randomly, if you want the same elements to be taken every time, make
     sure that you always use the same seed.
-    
+        
     :param array_indices: The list of indices.
-    :param ratio: The ration of selected / not selected elements (0 < ratio < 1) 
+    :param ratio: The ration of selected / not selected elements (0 < ratio < 1), if omited, 
+    it expects a number of samples to be provided.
+    :param n_samples: Number of samples.
     :param random_seed: A string to be used as the seed sor the pseudo random generator.
     """
-    if ratio < 0 or ratio > 1:
-        raise ValueError("Ratio must be < 1 and > 0")
-    n_blocks = len(array_indices)
-    n_selected = int(n_blocks * ratio)
+    if ratio is not None:
+        if ratio < 0 or ratio > 1:
+            raise ValueError("Ratio must be < 1 and > 0")
+        n_blocks = len(array_indices)
+        n_selected = int(n_blocks * ratio)
+    elif n_samples is not None:
+        n_selected = n_samples
+    else:
+        raise AttributeError("Must provide ratio or n_samples.")
+
     random_generator = Random(random_seed)
     # Obs: Para otimização, é possível copiar e reproduzir a função sample,
     # separando os selecionados e não selecionados.
