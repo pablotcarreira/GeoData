@@ -1,10 +1,10 @@
 import hashlib
+import os
 from typing import Tuple
 
-import numpy as np
-import matplotlib.pylab as plt
 import cv2
-import os
+import matplotlib.pylab as plt
+import numpy as np
 
 
 def plot_imagem(imagem, name="Imagem", size=(10, 15), gray=False):
@@ -52,6 +52,8 @@ def normalize_channel_range(x: np.ndarray) -> np.ndarray:
 def normalize_block_shape(block_size: Tuple, array_in: np.ndarray) -> np.ndarray:
     """Normaliza o tamanho do bloco para o block size desejado,
     garante que a RN recebe blocos sempre do mesmo tamanho.
+    
+    Preenche o resto com zeros.
 
     * Funciona apenas com matrizes bi-dimensionais.
     * As bordas são preenchodas com preto.    

@@ -5,6 +5,7 @@ from random import Random
 from typing import List, Tuple, Sequence, Iterator
 
 import numpy as np
+from _dev.utils import normalize_channel_range
 from rasterdata import RasterData
 
 
@@ -234,6 +235,13 @@ def create_block_iterator(raster_data: RasterData,
                 Ver bug referente ao ultimo bloco ser menor que o padding.""")
 
         print(a_block_coordinates == original_block_coordinates)
+
+        # Normalização e Transpose (passos 6 e 6b)
+        # Fixme: Passar os objetos que executariam a normalização e o transpose.
+        block_data = np.expand_dims(normalize_channel_range(block_data), 0)  # Normaliza e adiciona uma dimensão.
+        block_data = np.transpose(block_data, (0, (0, 3, 1, 2)))
+
+        # FIXME: Transformar este trio em um objeto "raster_block".
         yield block_data, block_valid_data, original_block_coordinates
 
 
@@ -257,6 +265,28 @@ def write_block(output_raster_data: RasterData, block_data: np.ndarray, block_po
         # FIXME: Acredito que o GDAL utilize column first.
         output_raster_data.gdal_dataset.GetRasterBand(b + 1).WriteArray(band_data, block_position[2], block_position[0])
     output_raster_data.gdal_dataset.FlushCache()
+
+
+def create_training_iterators(img_data_path: str, img_labels_path: str,
+                             blk_shape=(572, 572), img_padding=94, samples=1000):
+    img_data = RasterData(img_data_path)  # 1
+    img_labels = RasterData(img_labels_path)
+    img_shape = img_data.meta.shape  # Shape tanto dos dados quanto dos labels (varia o numero de canais).
+
+    matriz_de_coordenadas = create_blocks_coordinates_array(blk_shape=blk_shape, img_shape=img_shape)  # 2
+    indices = generate_array_indices(matriz_de_coordenadas)  # 3
+
+
+    # FIXME: Transformar esta etapa em um objeto "sampler" que pode ser passado para a função.
+    indices_selected, indices_not_selected = sample_block_indices(indices, n_samples=samples, random_seed="train")  # 4
+
+    data_iter = create_block_iterator(img_data, matriz_de_coordenadas, indices, blk_shape, img_padding)  # 5
+    labels_iter = create_block_iterator(img_labels, matriz_de_coordenadas, indices, blk_shape, padding=0)  # 5
+
+    return data_iter, labels_iter
+
+
+
 
 
 if __name__ == '__main__':
