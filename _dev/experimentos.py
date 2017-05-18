@@ -1,10 +1,11 @@
 # Pablo Carreira - 12/05/17
 
+from random import Random
 # Mirroring and padding
-from typing import List, Tuple, Generator, Sequence, Iterator
+from typing import List, Tuple, Sequence, Iterator
+
 import numpy as np
 from rasterdata import RasterData
-from random import Random
 
 
 def create_blocks_coordinates_array(blk_shape, img_shape):
@@ -136,6 +137,7 @@ def create_block_iterator(raster_data: RasterData,
     :param block_indices: The indices of the blocks, passing the indices allows to iterate over specific blocks.
     :param block_shape: The shape of the blocks without the padding.
     :param padding: The size in pixels of the padding.     
+    :returns: The block data (with padding), the valid data region, the block coordinates at the image.
     """
     img_shape = raster_data.meta.shape
 
@@ -167,13 +169,14 @@ def create_block_iterator(raster_data: RasterData,
         block_valid_data = [0, block_shape[0], 0, block_shape[1]]
 
         row_index, col_index = index
+        original_block_coordinates = block_coordinates[row_index, col_index]
         a_block_coordinates = block_coordinates[row_index, col_index]
 
         if row_index + 1 == n_block_rows:
             # Ultima linha. Completa o que falta e pega o padding dos blocos de cima.
             y0, y1, x0, x1 = a_block_coordinates
             a_block_coordinates = [y0 - dif_last_row - padding, y1, x0, x1]
-            block_valid_data[1] -= resto_pixel_rows
+            block_valid_data[0] = dif_last_row
 
         elif row_index + 1 != n_block_rows and row_index != 0:
             # Não é ultima linha, nem a primeira, pega o padding do bloco de cima e de baixo.
@@ -184,7 +187,8 @@ def create_block_iterator(raster_data: RasterData,
             # Ultima coluna, completa e pega o padding do bloco da esquerda.
             y0, y1, x0, x1 = a_block_coordinates
             a_block_coordinates = [y0, y1, x0 - dif_last_col - padding, x1]
-            block_valid_data[3] = block_valid_data[3] - resto_pixel_cols
+            block_valid_data[2] = dif_last_col
+
 
         elif col_index + 1 != n_block_cols and col_index != 0:
             # Nem a ultima nem a primeira coluna. Pega o padding do bloco da direita e da esquerda.
@@ -221,8 +225,8 @@ def create_block_iterator(raster_data: RasterData,
                 Foi gerado um bloco de tamanho incorreto. 
                 Ver bug referente ao ultimo bloco ser menor que o padding.""")
 
-
-        yield block_data, block_valid_data, a_block_coordinates
+        print(a_block_coordinates == original_block_coordinates)
+        yield block_data, block_valid_data, original_block_coordinates
 
 
 def fake_neural_net_padding_crop(image, padding):
