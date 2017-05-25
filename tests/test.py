@@ -1,22 +1,20 @@
 # Pablo Carreira - 08/03/17
 import hashlib
 from collections import Iterator
+
 from rasterdata import RasterData
 
-
-# raster_data = RasterData("tests/data/imagem.tiff")
-raster_data = RasterData("tests/data/imagem2.tif")
+raster_data = RasterData("tests/data/imagem.tiff")
 
 
 def test_metadata():
-    meta = raster_data.meta
-    assert meta.block_size == [128, 128]
+    assert raster_data.block_size == [400, 64]
 
 
 # noinspection PyProtectedMember
 def test_block_list():
     block_list = raster_data._create_blocks_list()
-    assert block_list[0] == (0, 0, 128, 128)
+    assert block_list[0] == (0, 0, 400, 64)
 
 
 def test_create_iterator():
@@ -26,7 +24,7 @@ def test_create_iterator():
 
 def test_clone():
     new_raster = raster_data.clone_empty("tests/data/imagem_clone.tiff")
-    assert raster_data.meta == new_raster.meta
+    assert raster_data == new_raster
 
 
 def test_write():
@@ -56,12 +54,6 @@ def test_write():
     with open(new_raster.img_file, 'rb') as source_file:
         md5 = hashlib.md5(source_file.read()).hexdigest()
         assert md5 == clone_written
-
-
-def test_get_coords():
-    raise NotImplementedError
-
-
 
 
 if __name__ == '__main__':

@@ -1,31 +1,36 @@
 # Pablo Carreira - 08/03/17
-from typing import Iterator, overload, List, Tuple
+from typing import Iterator, List, Tuple
 
 import gdal
-import osr
 import numpy as np
+import osr
 
 
-class RasterMetadata:
-    """Metadados sobre uma imagem raster.
-
-    Permite fazer o teste de igualdade para ver se os datasets são iguais, em relação ao
-    tamanho da imagem (shape), block size, projeção, origem e tamanho do pixel. Não compara
-    numero de bandas nem tipo de dados.
-    """
+class RasterData:
+    """Representa uma matriz raster com características espaciais."""
     # Aguardando python 3.6 para poder usar o typing aqui. Ficaria assim:
-    # n_bandas: int = 1 ou apenas n_bandas: int
-    n_bandas = 1
+    # n_channels: int = 1 ou apenas n_channels: int
+
+    _block_list = None
+    _block_indices = None
+    n_channels = 1
     proj = None
     origem = None
     pixel_size = None
 
-    def __init__(self, cols=None, rows=None, block_size=None):
-        self.rows = rows
-        self.block_size = block_size
-        self.cols = cols
+    def __init__(self, img_file: str, write_enabled: bool=False, verbose: bool=False):
+        """
+        :param img_file: Caminho para o arquivo tiff da imagem.
+        :param write_enabled: Habilita a escrita para o arquivo. 
+        """
+        #: Caminho para o arquivo tiff da imagem (fonte de dados).
+        self.verbose=verbose
+        self.img_file = img_file
+        self.write_enabled = write_enabled
+        self.src_image = img_file
+        self._load_metadata()  # May be lazy?
 
-    def __eq__(self, other: 'RasterMetadata') -> bool:
+    def __eq__(self, other: 'RasterData') -> bool:
         # Estas 3 linhas garantem a comparação correta da referência espacial.
         spatial_self = osr.SpatialReference(self.proj)
         spatial_other = osr.SpatialReference(other.proj)
@@ -45,25 +50,6 @@ class RasterMetadata:
         """
         return self.rows, self.cols
 
-
-class RasterData:
-    """Representa uma matriz raster com características espaciais."""
-    _block_list = None
-    _block_indices = None
-
-    def __init__(self, img_file: str, write_enabled: bool=False, verbose: bool=False):
-        """
-        :param img_file: Caminho para o arquivo tiff da imagem.
-        :param write_enabled: Habilita a escrita para o arquivo. 
-        """
-        #: Caminho para o arquivo tiff da imagem (fonte de dados).
-        self.verbose=verbose
-        self.img_file = img_file
-        self.write_enabled = write_enabled
-        self.src_image = img_file
-        self.meta = RasterMetadata()
-        self._load_metadata()
-
     def read_block_by_coordinates(self, y0, y1, x0, x1):
         """Get a block by coordinates.
         Returns a RGB block.
@@ -77,25 +63,22 @@ class RasterData:
         """
         # Make sure the params are ints otherwise gdal won't accept them.
         x0, y0, x1, y1 = int(x0), int(y0), int(x1), int(y1)
-
         # Gdal takes offset and size instead of start and end, so we convert the parameters.
         x_size = x1 - x0
         y_size = y1 - y0
-
-        red_channel = self.gdal_dataset.GetRasterBand(1)
-        green_channel = self.gdal_dataset.GetRasterBand(2)
-        blue_channel = self.gdal_dataset.GetRasterBand(3)
-        red_block_data = red_channel.ReadAsArray(x0, y0, x_size, y_size)
-        green_block_data = green_channel.ReadAsArray(x0, y0, x_size, y_size)
-        blue_block_data = blue_channel.ReadAsArray(x0, y0, x_size, y_size)
-        return np.dstack((red_block_data, green_block_data, blue_block_data))
+        channels_count = range(self.n_channels)
+        channels_blocks = []
+        for item in channels_count:
+            channel = self.gdal_dataset.GetRasterBand(item + 1)
+            channels_blocks.append(channel.ReadAsArray(x0, y0, x_size, y_size))
+        return np.dstack(channels_blocks)
 
     # noinspection PyTypeChecker
     @property
     def block_indices(self) -> np.ndarray:
         """Contêm o índice dos elementos de qualquer bloco. É lazy."""
         if self._block_indices is None:
-            self._block_indices = np.indices(self.meta.block_size)
+            self._block_indices = np.indices(self.block_size)
         return self._block_indices
 
     @property
@@ -114,26 +97,20 @@ class RasterData:
         self.gdal_dataset = gdal_dataset
 
         # Informacoes gerais.
-        self.meta.cols = gdal_dataset.RasterXSize
-        self.meta.rows = gdal_dataset.RasterYSize
-        self.meta.n_bandas = gdal_dataset.RasterCount
-        self.meta.proj = gdal_dataset.GetProjection()
+        self.cols = gdal_dataset.RasterXSize
+        self.rows = gdal_dataset.RasterYSize
+        self.n_channels = gdal_dataset.RasterCount
+        self.proj = gdal_dataset.GetProjection()
 
         geot = gdal_dataset.GetGeoTransform()
-        self.meta.origem = (geot[0], geot[3])
-        self.meta.pixel_size = geot[1]
+        self.origem = (geot[0], geot[3])
+        self.pixel_size = geot[1]
 
         src_band = gdal_dataset.GetRasterBand(1)
-        self.meta.block_size = src_band.GetBlockSize()
-        if self.verbose:
-            print("Image shape {}x{}px. ".format(self.meta.cols, self.meta.rows))
-            print("Origem: {}m , {}m.".format(round(self.meta.origem[0], 2), round(self.meta.origem[1], 2)))
-            print("Resolucao: {}m.".format(round(self.meta.pixel_size, 2)))
-            print("Bandas: {}".format(self.meta.n_bandas))
-            print("Projecao: \n {}".format(self.meta.proj))
+        self.block_size = src_band.GetBlockSize()
 
         # Informações por banda.
-        for item in range(self.meta.n_bandas):
+        for item in range(self.n_channels):
             src_band = gdal_dataset.GetRasterBand(item + 1)
             src_block_size = src_band.GetBlockSize()
             if self.verbose:
@@ -141,12 +118,11 @@ class RasterData:
 
     def _create_blocks_list(self):
         """Cretes a list of block reading coordinates."""
-        meta = self.meta
-        blk_width, blk_height = meta.block_size
+        blk_width, blk_height = self.block_size
 
         # Get the number of blocks.
-        x_blocks = int((meta.cols + blk_width - 1) / blk_width)
-        y_blocks = int((meta.rows + blk_height - 1) / blk_height)
+        x_blocks = int((self.cols + blk_width - 1) / blk_width)
+        y_blocks = int((self.rows + blk_height - 1) / blk_height)
         # print("Creating blocks list with {} blocks ({} x {}).".format(
         #     x_blocks * y_blocks, x_blocks, y_blocks))
 
@@ -154,7 +130,7 @@ class RasterData:
         for block_column in range(0, x_blocks):
             # Recalculate the shape of the rightmost block.
             if block_column == x_blocks - 1:
-                valid_x = meta.cols - block_column * blk_width
+                valid_x = self.cols - block_column * blk_width
             else:
                 valid_x = blk_width
             xoff = block_column * blk_width
@@ -162,7 +138,7 @@ class RasterData:
             for block_row in range(0, y_blocks):
                 # Recalculate the shape of the final block.
                 if block_row == y_blocks - 1:
-                    valid_y = meta.rows - block_row * blk_height
+                    valid_y = self.rows - block_row * blk_height
                 else:
                     valid_y = blk_height
                 yoff = block_row * blk_height
@@ -219,16 +195,16 @@ class RasterData:
         # Criado na unha para poder ajustar parâmetros.
 
         if bandas == 0:
-            bandas = self.meta.n_bandas
+            bandas = self.n_channels
 
         gdal_driver = self.gdal_dataset.GetDriver()
 
         geotiff_options = ["TILED=YES",
-                           "BLOCKXSIZE=" + str(self.meta.block_size[0]),
-                           "BLOCKYSIZE=" + str(self.meta.block_size[1])]
+                           "BLOCKXSIZE=" + str(self.block_size[0]),
+                           "BLOCKYSIZE=" + str(self.block_size[1])]
 
         new_dataset = gdal_driver.Create(new_img_file,
-                                         self.meta.cols, self.meta.rows,
+                                         self.cols, self.rows,
                                          bands=bandas,
                                          eType=data_type,
                                          options=geotiff_options)
@@ -248,17 +224,19 @@ class RasterData:
         block_position = self.block_list[block_index]
         block_coords = np.empty(self.block_indices.shape)
         for eixo in range(self.block_indices.shape[0]):
-            coords = self.block_indices[eixo] * self.meta.pixel_size + self.meta.origem[eixo] + block_position[eixo] * self.meta.pixel_size
+            coords = self.block_indices[eixo] * self.pixel_size + self.origem[eixo] + block_position[eixo] * self.pixel_size
             block_coords[eixo] = coords
         return block_coords
 
-    def write_block(self, data_array: np.ndarray, block_index: int, banda: int=1):
+    def write_block(self, data_array: np.ndarray, block_index: int, channel: int=1):
         """Escreve um bloco de dados em uma banda.
 
+        :param channel: 
+        :param data_array: 
         :param block_index: O índice do bloco para escrever.
         """
         block_position = self.block_list[block_index]
-        self.gdal_dataset.GetRasterBand(banda).WriteArray(data_array, block_position[0], block_position[1])
+        self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array, block_position[0], block_position[1])
         self.gdal_dataset.FlushCache()
 
 
