@@ -1,31 +1,39 @@
 # Pablo Carreira - 30/05/17
 import collections
-from typing import Sequence
 
-import numpy as np
 from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT
 from rasterdata import RasterData
 
 
+class RasterBlock:
+    __slots__ = ("block_data", "block_valid_data", "original_block_coordinates", "block_index")
+
+    def __init__(self, block_data, block_valid_data, original_block_coordinates, block_index):
+        """Represents a single raster block."""
+        self.block_data = block_data
+        self.block_valid_data = block_valid_data
+        self.original_block_coordinates = original_block_coordinates
+        self.block_index = block_index
+
+    @property
+    def data(self):
+        return self.block_data
+
+
 class RasterPaddingIterator(collections.Iterator):
-    def __init__(self, raster_data: RasterData, block_indices: Sequence,
-                 block_size: Sequence, padding: int, block_coordinates, infinite: bool = False):
+    def __init__(self, raster_data: RasterData, padding: int, infinite: bool = False):
         """Iterates over a single raster, yelds image blocks with an extra padding around it.
 
         :param raster_data: The image RasterData.
-        :param block_coordinates: The coordinates of the image blocks.
-        :param block_indices: The indices of the blocks, passing the indices allows to iterate over specific blocks.
-        :param block_size: The shape of the blocks without the padding.
         :param padding: The size in pixels of the padding.     
         :param infinite: If the iterator should run infinite times.
-                :returns: The block data (with padding), the valid data region, the block coordinates at the image.
+        :returns: The block data (with padding), the valid data region, the block coordinates at the image.
         """
-        raster_data.n_bandas = 3  # Override no numero de bandas.
-        self.block_indices = block_indices
+        self.block_indices = raster_data.get_blocks_array_indices()
         self.infinite = infinite
-        self.block_coordinates = block_coordinates
+        self.block_coordinates = raster_data.get_blocks_positions_coordinates()
         self.padding = padding
-        self.block_size = block_size
+        self.block_size = raster_data.block_size
         self.raster_data = raster_data
 
         self.index = 0
@@ -33,16 +41,16 @@ class RasterPaddingIterator(collections.Iterator):
         img_shape = raster_data.shape
 
         # Quantos blocos inteiros cabem, quantos pixels sobram
-        self.n_block_rows, self.resto_pixel_rows = divmod(img_shape[0], block_size[0])
-        self.n_block_cols, self.resto_pixel_cols = divmod(img_shape[1], block_size[1])
+        self.n_block_rows, self.resto_pixel_rows = divmod(img_shape[0], self.block_size[0])
+        self.n_block_cols, self.resto_pixel_cols = divmod(img_shape[1], self.block_size[1])
 
         # Number of pixels needed to complete the last row and the last column.
-        self.dif_last_row = block_size[0] - self.resto_pixel_rows
-        self.dif_last_col = block_size[1] - self.resto_pixel_cols
+        self.dif_last_row = self.block_size[0] - self.resto_pixel_rows
+        self.dif_last_col = self.block_size[1] - self.resto_pixel_cols
         # If those number are equal to the block size, this means that nothing is missing.
-        if self.dif_last_row == block_size[0]:
+        if self.dif_last_row == self.block_size[0]:
             self.dif_last_row = 0
-        if self.dif_last_col == block_size[1]:
+        if self.dif_last_col == self.block_size[1]:
             self.dif_last_col = 0
 
         # Caso haja um pedaço sobrando do final, inclui mais um bloco.
@@ -53,9 +61,9 @@ class RasterPaddingIterator(collections.Iterator):
             self.n_block_cols += 1
 
         double_padding = 2 * padding  # Padding on both sizes is equal to...
-        self.expected_shape = (block_size[0] + double_padding, block_size[1] + double_padding)
+        self.expected_shape = (self.block_size[0] + double_padding, self.block_size[1] + double_padding)
 
-    def __next__(self):
+    def __next__(self) -> RasterBlock:
         try:
             self.index += 1
             row_index, col_index = self.block_indices[self.index]
@@ -65,7 +73,7 @@ class RasterPaddingIterator(collections.Iterator):
                 self.index = 0
                 row_index, col_index = self.block_indices[self.index]
             else:
-                raise
+                raise StopIteration
 
         # Position of the data that is valid for write (excludes padding and block completion).
         # [vy0, vy1, vx0, vx1]
@@ -157,12 +165,4 @@ class RasterPaddingIterator(collections.Iterator):
                        Foi gerado um bloco de tamanho incorreto. 
                        Esperado: {},  Gerado: {}.""".format(self.expected_shape, block_data.shape[:2]))
 
-        # print(a_block_coordinates == original_block_coordinates)
-
-        # Normalização e Transpose (passos 6 e 6b)
-        # Fixme: Passar os objetos que executariam a normalização e o transpose.
-        block_data = np.expand_dims(normalize_channel_range(block_data), 0)  # Normaliza e adiciona uma dimensão.
-        block_data = np.transpose(block_data, (0, 3, 1, 2))
-
-        # FIXME: Transformar este trio em um objeto "raster_block".
-        return block_data, block_valid_data, original_block_coordinates
+        return RasterBlock(block_data, block_valid_data, original_block_coordinates, (row_index, col_index))

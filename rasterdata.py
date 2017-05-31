@@ -24,7 +24,7 @@ class RasterData:
         :param write_enabled: Habilita a escrita para o arquivo. 
         """
         #: Caminho para o arquivo tiff da imagem (fonte de dados).
-        self.verbose=verbose
+        self.verbose = verbose
         self.img_file = img_file
         self.write_enabled = write_enabled
         self.src_image = img_file
@@ -145,6 +145,23 @@ class RasterData:
                 blocks_list.append((xoff, yoff, valid_x, valid_y))
         return blocks_list
 
+    def get_blocks_array_indices(self) -> List:
+        """Create a list of array indices (i, j) for the first two dimensions of an array.
+        The format is different from numpy.indices, 
+        numpy indices creates indices like [[i0, i1, in...], [j0, j1, jn, ...]]
+        this functions creates [[i0, j0], [i1, j1], [in, jn], ...]
+        
+        :returns: A list of indices (e.g. [[i0, j0], [i1, j1], [in, jn], ...])
+        """
+        # TODO: Make a lazy property.
+        array = self.get_blocks_positions_coordinates()
+        shape = array.shape
+        indices = []
+        for irow in range(shape[0]):
+            for icol in range(shape[1]):
+                indices.append((irow, icol))
+        return indices
+
     def get_iterator(self, banda: int=1) -> Iterator:
         """Retorna um iterator sobre a imagem, retornando um pedaço do
         tamanho do block size a cada passo.
@@ -160,7 +177,7 @@ class RasterData:
             block_data = src_band.ReadAsArray(*block)
             yield block_data
 
-    def get_rgb_iterator(self, stack: bool=True ) -> Iterator:
+    def get_rgb_iterator(self, stack: bool=True) -> Iterator:
         """Retorna um iterator sobre os 3 canais (RGB)
         
         :param stack: Empilha os canais em uma matriz (w, h, 3).
@@ -216,7 +233,39 @@ class RasterData:
         new_dataset.FlushCache()  # Garante a escrita no disco.
         return RasterData(new_img_file, write_enabled=True)
 
-    def get_block_coordinates(self, block_index: int) -> np.ndarray:
+    def get_blocks_positions_coordinates(self) -> np.ndarray:
+        """Creates an array containing the coordinates for the position (in image pixels) of each block.        
+
+        Coordinates are: y0, y1, x0, x1
+        """
+        # TODO: Make a lazy property.
+        # Quantos blocos inteiros cabem, quantos pixels sobram
+        n_block_rows, resto_pixel_rows = divmod(self.rows, self.block_size[0])
+        n_block_cols, resto_pixel_cols = divmod(self.cols, self.block_size[1])
+        # Caso haja um pedaço sobrando do final, inclui mais um bloco.
+        if resto_pixel_rows != 0:
+            n_block_rows += 1
+        if resto_pixel_cols != 0:
+            n_block_cols += 1
+        # Primeiro, cria a matriz de escrita, o bloco tem o tamanho do blk_size.
+        coord_array = np.empty((n_block_rows, n_block_cols, 4), dtype=np.uint16)
+        for row_index in range(n_block_rows):
+            y0 = row_index * self.block_size[0]
+            if row_index + 1 == n_block_rows:  # Last row.
+                y1 = self.rows
+            else:
+                y1 = self.block_size[0] * (row_index + 1)
+
+            for col_index in range(n_block_cols):
+                x0 = col_index * self.block_size[1]
+                if col_index + 1 == n_block_cols:  # Last column.
+                    x1 = self.cols
+                else:
+                    x1 = self.block_size[1] * (col_index + 1)
+                coord_array[row_index][col_index] = [y0, y1, x0, x1]
+        return coord_array
+
+    def get_block_pixel_coordinates(self, block_index: int) -> np.ndarray:
         """Retorna uma matriz com as coordenadas geográficas dos pixels do bloco.
 
         :param block_index: 
@@ -224,7 +273,8 @@ class RasterData:
         block_position = self.block_list[block_index]
         block_coords = np.empty(self.block_indices.shape)
         for eixo in range(self.block_indices.shape[0]):
-            coords = self.block_indices[eixo] * self.pixel_size + self.origem[eixo] + block_position[eixo] * self.pixel_size
+            coords = self.block_indices[eixo] * self.pixel_size + self.origem[eixo] +\
+                     block_position[eixo] * self.pixel_size
             block_coords[eixo] = coords
         return block_coords
 
@@ -238,6 +288,3 @@ class RasterData:
         block_position = self.block_list[block_index]
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array, block_position[0], block_position[1])
         self.gdal_dataset.FlushCache()
-
-
-
