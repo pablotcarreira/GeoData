@@ -166,3 +166,4 @@ class RasterPaddingIterator(collections.Iterator):
                        Esperado: {},  Gerado: {}.""".format(self.expected_shape, block_data.shape[:2]))
 
         return RasterBlock(block_data, block_valid_data, original_block_coordinates, (row_index, col_index))
+

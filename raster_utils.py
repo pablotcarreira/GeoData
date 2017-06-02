@@ -9,6 +9,7 @@ MIRROR_BOTTOM = "bottom"
 MIRROR_LEFT = "left"
 MIRROR_RIGHT = "right"
 MIRROR_ERROR_MESSAGE = "Padding bigger than block dimension."
+
 SAMPLER_RATIO_METHOD = "ratio"
 SAMPLER_METHOD_N_SAMPLES = "n_samples"
 
