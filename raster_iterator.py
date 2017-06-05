@@ -1,19 +1,25 @@
 # Pablo Carreira - 30/05/17
 import collections
 
+import numpy as np
 from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT
 from rasterdata import RasterData
 
 
 class RasterBlock:
-    __slots__ = ("block_data", "block_valid_data", "original_block_coordinates", "block_index")
+    __slots__ = ("block_data", "valid_data_region", "original_block_coordinates", "block_index")
 
-    def __init__(self, block_data, block_valid_data, original_block_coordinates, block_index):
+    def __init__(self, block_data, valid_data_region, original_block_coordinates, block_index):
         """Represents a single raster block."""
         self.block_data = block_data
-        self.block_valid_data = block_valid_data
+        self.valid_data_region = valid_data_region
         self.original_block_coordinates = original_block_coordinates
         self.block_index = block_index
+
+    def get_valid_data(self) -> np.ndarray:
+        """Returns the data inside the valid region."""
+        return self.block_data[
+               self.valid_data_region[0]:self.valid_data_region[1], self.valid_data_region[2]:self.valid_data_region[3]]
 
     @property
     def data(self):
@@ -166,4 +172,3 @@ class RasterPaddingIterator(collections.Iterator):
                        Esperado: {},  Gerado: {}.""".format(self.expected_shape, block_data.shape[:2]))
 
         return RasterBlock(block_data, block_valid_data, original_block_coordinates, (row_index, col_index))
-

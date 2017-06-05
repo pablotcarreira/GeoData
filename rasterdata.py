@@ -216,9 +216,17 @@ class RasterData:
 
         gdal_driver = self.gdal_dataset.GetDriver()
 
+        out_block_size = [256, 256]
+
+        # Check if block size is power of two, if not keep the default block size:
+        if self.block_size[0] != 0 and ((self.block_size[0] & (self.block_size[0] - 1)) == 0):
+            out_block_size[0] = self.block_size[0]
+        if self.block_size[1] != 1 and ((self.block_size[1] & (self.block_size[1] - 1)) == 0):
+            out_block_size[1] = self.block_size[1]
+
         geotiff_options = ["TILED=YES",
-                           "BLOCKXSIZE=" + str(self.block_size[0]),
-                           "BLOCKYSIZE=" + str(self.block_size[1])]
+                           "BLOCKXSIZE=" + str(out_block_size[0]),
+                           "BLOCKYSIZE=" + str(out_block_size[1])]
 
         new_dataset = gdal_driver.Create(new_img_file,
                                          self.cols, self.rows,
