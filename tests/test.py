@@ -56,5 +56,11 @@ def test_write():
         assert md5 == clone_written
 
 
+def test_read_all():
+    source_raster = RasterData("tests/data/imagem.tiff")
+    array = source_raster.read_all()
+    assert array.shape == (3, 400, 400)
+
+
 if __name__ == '__main__':
-    test_write()
+    test_read_all()

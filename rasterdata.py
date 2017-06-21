@@ -50,6 +50,10 @@ class RasterData:
         """
         return self.rows, self.cols
 
+    def read_all(self) -> np.ndarray:
+        """Reads the entire data into an array."""
+        return self.gdal_dataset.ReadAsArray()
+
     def read_block_by_coordinates(self, y0, y1, x0, x1):
         """Get a block by coordinates.
         Returns a RGB block.

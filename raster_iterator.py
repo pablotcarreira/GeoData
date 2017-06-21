@@ -2,7 +2,7 @@
 import collections
 
 import numpy as np
-from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT
+from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT, ArraySampler
 from rasterdata import RasterData
 
 
@@ -27,7 +27,7 @@ class RasterBlock:
 
 
 class RasterPaddingIterator(collections.Iterator):
-    def __init__(self, raster_data: RasterData, padding: int, infinite: bool = False):
+    def __init__(self, raster_data: RasterData, padding: int, infinite: bool = False, sampler: ArraySampler=None):
         """Iterates over a single raster, yelds image blocks with an extra padding around it.
 
         :param raster_data: The image RasterData.
@@ -35,7 +35,13 @@ class RasterPaddingIterator(collections.Iterator):
         :param infinite: If the iterator should run infinite times.
         :returns: The block data (with padding), the valid data region, the block coordinates at the image.
         """
-        self.block_indices = raster_data.get_blocks_array_indices()
+        block_indices = raster_data.get_blocks_array_indices()
+
+        if sampler:
+            self.block_indices, _ = sampler.sample(block_indices)
+        else:
+            self.block_indices = block_indices
+
         self.infinite = infinite
         self.block_coordinates = raster_data.get_blocks_positions_coordinates()
         self.padding = padding
@@ -68,6 +74,9 @@ class RasterPaddingIterator(collections.Iterator):
 
         double_padding = 2 * padding  # Padding on both sizes is equal to...
         self.expected_shape = (self.block_size[0] + double_padding, self.block_size[1] + double_padding)
+
+    def __len__(self) -> int:
+        return len(self.block_indices)
 
     def __next__(self) -> RasterBlock:
         try:
