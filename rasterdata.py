@@ -305,3 +305,8 @@ class RasterData:
         block_position = self.block_list[block_index]
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array, block_position[0], block_position[1])
         self.gdal_dataset.FlushCache()
+
+    def write_all(self, data_array: np.ndarray, channel: int=1):
+        """Write an array to the image starting from the first position."""
+        self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array)
+        self.gdal_dataset.FlushCache()
