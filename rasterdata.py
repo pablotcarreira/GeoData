@@ -50,6 +50,11 @@ class RasterData:
         """
         return self.rows, self.cols
 
+    def change_resolution(self, new_pixel_size):
+        """ Change the real world size of the image pixel."""
+        raise NotImplementedError
+        pass
+
     def read_all(self) -> np.ndarray:
         """Reads the entire data into an array."""
         return self.gdal_dataset.ReadAsArray()

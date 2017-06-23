@@ -1,9 +1,8 @@
-tests/data/imagem2.tif
 tests/data/imagem_clone.tiff
 tests/data/imagem_copy.tiff
-indice.py
-banda.py
-block_iteration.py
+_codigo_referencia/
+
+
 
 
 tests/imagem.tif
