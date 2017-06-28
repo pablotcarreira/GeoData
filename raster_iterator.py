@@ -2,7 +2,8 @@
 import collections
 
 import numpy as np
-from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT, ArraySampler
+from raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT, ArraySampler, \
+    normalize_channel_range
 from rasterdata import RasterData
 
 
@@ -22,8 +23,15 @@ class RasterBlock:
                self.valid_data_region[0]:self.valid_data_region[1], self.valid_data_region[2]:self.valid_data_region[3]]
 
     @property
-    def data(self):
+    def data(self) -> np.ndarray:
         return self.block_data
+
+    @property
+    def nn_data(self) -> np.ndarray:
+        """Block data normalized and in channels first format."""
+        raster_data = np.expand_dims(normalize_channel_range(self.data), 0)
+        raster_data = np.transpose(raster_data, (0, 3, 1, 2))
+        return raster_data
 
 
 class RasterPaddingIterator(collections.Iterator):
