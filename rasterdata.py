@@ -4,6 +4,7 @@ from typing import Iterator, List, Tuple
 import gdal
 import numpy as np
 import osr
+from srs_utils import create_osr_srs
 
 
 class RasterData:
@@ -50,10 +51,10 @@ class RasterData:
         """
         return self.rows, self.cols
 
-    def change_resolution(self, new_pixel_size):
+    def change_resolution(self, new_pixel_size, out_image):
         """ Change the real world size of the image pixel."""
-        raise NotImplementedError
-        pass
+        options = gdal.WarpOptions(xRes=new_pixel_size, yRes=new_pixel_size, targetAlignedPixels=True)
+        gdal.Warp(out_image, self.gdal_dataset, options=options)
 
     def read_all(self) -> np.ndarray:
         """Reads the entire data into an array."""
@@ -310,3 +311,12 @@ class RasterData:
         """Write an array to the image starting from the first position."""
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array)
         self.gdal_dataset.FlushCache()
+
+    def reproject(self, out_image, dst_srs):
+        """Changes this dataset projection and creates a new file."""
+        # Ver docstring para mais opções.
+        srs = create_osr_srs(dst_srs)
+        options = gdal.WarpOptions(
+            dstSRS=srs)
+        gdal.Warp(out_image, self.gdal_dataset, options=options)
+

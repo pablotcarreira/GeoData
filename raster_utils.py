@@ -132,3 +132,7 @@ def normalize_channel_range(x: np.ndarray) -> np.ndarray:
     """Normaliza entre 0 e 1"""
     # return 2 * (x / 255) - 1
     return x / 255
+
+
+def normalize_by_mean(x: np.ndarray) -> np.ndarray:
+    pass
