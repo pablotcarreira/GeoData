@@ -7,8 +7,6 @@ import osr
 
 
 class VectorData:
-    layers = {}
-
     def __init__(self, src_file: str, ogr_format: str=None, srs: Union[str, int, osr.SpatialReference]=None,
                  overwrite: bool=False):
         """                
@@ -17,6 +15,7 @@ class VectorData:
         :param srs: Proj4 string, EPSG code or OSR.srs object.
         :param overwrite: Aways create a new file.
         """
+        self.layers = {}
         self.src_file = src_file
         self.ogr_datasource = None
         self.ogr_format = ogr_format
@@ -71,6 +70,12 @@ class VectorData:
         # FIXME: Deve estar na layer.
         id_field = ogr.FieldDefn("ID", ogr.OFTInteger)
         self.layers[layer_name].CreateField(id_field)
+
+    def get_features_iterator(self) -> ogr.Layer:
+        """Returns the first layer."""
+        layer = self.ogr_datasource.GetLayerByIndex(0)
+        layer.ResetReading()
+        return layer
 
     def add_feature_to_layer(self, geometry: ogr.Geometry, properties: dict, layer_name: str):
         # Fixme - Deve estar na layer, pode estar aqui apenas por um atalho de conveniência.
