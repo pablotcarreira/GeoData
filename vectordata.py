@@ -62,10 +62,10 @@ class VectorData:
             raise IOError("Can't create the file in this location: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
 
-    def create_layer(self, layer_name="1"):
+    def create_layer(self, layer_name: str="1", geom_type: str=ogr.wkbLineString):
         if layer_name in self.layers.keys():
             raise AttributeError("Layer with name {} already exists".format(layer_name))
-        self.layers[layer_name] = self.ogr_datasource.CreateLayer(layer_name, self.srs, ogr.wkbLineString)
+        self.layers[layer_name] = self.ogr_datasource.CreateLayer(layer_name, self.srs, geom_type)
         # Cria o campo id, o unico que vai ser usado por enquanto.
         # FIXME: Deve estar na layer.
         id_field = ogr.FieldDefn("ID", ogr.OFTInteger)
