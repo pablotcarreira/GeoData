@@ -70,6 +70,7 @@ class VectorData:
         # FIXME: Deve estar na layer.
         id_field = ogr.FieldDefn("ID", ogr.OFTInteger)
         self.layers[layer_name].CreateField(id_field)
+        return self.layers[layer_name]
 
     def get_features_iterator(self) -> ogr.Layer:
         """Returns the first layer."""
