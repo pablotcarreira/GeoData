@@ -4,6 +4,7 @@ from typing import Iterator, List, Tuple
 import gdal
 import numpy as np
 import osr
+
 from srs_utils import create_osr_srs
 
 
@@ -19,7 +20,7 @@ class RasterData:
     origem = None
     pixel_size = None
 
-    def __init__(self, img_file: str, write_enabled: bool=False, verbose: bool=False):
+    def __init__(self, img_file: str, write_enabled: bool = False, verbose: bool = False):
         """
         :param img_file: Caminho para o arquivo tiff da imagem.
         :param write_enabled: Habilita a escrita para o arquivo. 
@@ -62,7 +63,7 @@ class RasterData:
         return self.gdal_dataset.ReadAsArray()
 
     def read_block_by_coordinates(self, y0, y1, x0, x1):
-        """Get a block by coordinates.
+        """Get a block by image coordinates.
         Returns a RGB block.
         
         Remember: Row first!
@@ -83,6 +84,23 @@ class RasterData:
             channel = self.gdal_dataset.GetRasterBand(item + 1)
             channels_blocks.append(channel.ReadAsArray(x0, y0, x_size, y_size))
         return np.dstack(channels_blocks)
+
+    def read_block_by_utm_coordinates(self, xu0, xu1, yu0, yu1):
+        """Get a block by utm coordinates.
+        Returns a RGB block.
+        The mission here is to tranform meters in pixel coordinates that can be accepted by read_block_by_coordinates.
+        """
+        ox, oy = self.origem
+        res = self.pixel_size
+        coords = [round((oy - yu1) / res),  # y0
+                  round((oy - yu0) / res),  # y1
+                  round((xu0 - ox) / res),  # x0
+                  round((xu1 - ox) / res),  # x0
+                  ]
+        # Debug:
+        ty = coords[1] - coords[0]
+        tx = coords[3] - coords[2]
+        return self.read_block_by_coordinates(*coords)
 
     # noinspection PyTypeChecker
     @property
@@ -173,7 +191,7 @@ class RasterData:
                 indices.append((irow, icol))
         return indices
 
-    def get_iterator(self, banda: int=1) -> Iterator:
+    def get_iterator(self, banda: int = 1) -> Iterator:
         """Retorna um iterator sobre a imagem, retornando um pedaço do
         tamanho do block size a cada passo.
         
@@ -188,7 +206,7 @@ class RasterData:
             block_data = src_band.ReadAsArray(*block)
             yield block_data
 
-    def get_rgb_iterator(self, stack: bool=True) -> Iterator:
+    def get_rgb_iterator(self, stack: bool = True) -> Iterator:
         """Retorna um iterator sobre os 3 canais (RGB)
         
         :param stack: Empilha os canais em uma matriz (w, h, 3).
@@ -208,7 +226,7 @@ class RasterData:
             else:
                 yield red_block_data, green_block_data, blue_block_data
 
-    def clone_empty(self, new_img_file: str, bandas: int=0, data_type=gdal.GDT_Byte) -> 'RasterData':
+    def clone_empty(self, new_img_file: str, bandas: int = 0, data_type=gdal.GDT_Byte) -> 'RasterData':
         """Cria uma nova imagem RasterData com as mesmas características desta imagem,
         a nova imagem é vazia e pronta para a escrita.
         A finalidade é criar imagens para a saída de processamentos.
@@ -292,12 +310,12 @@ class RasterData:
         block_position = self.block_list[block_index]
         block_coords = np.empty(self.block_indices.shape)
         for eixo in range(self.block_indices.shape[0]):
-            coords = self.block_indices[eixo] * self.pixel_size + self.origem[eixo] +\
+            coords = self.block_indices[eixo] * self.pixel_size + self.origem[eixo] + \
                      block_position[eixo] * self.pixel_size
             block_coords[eixo] = coords
         return block_coords
 
-    def write_block(self, data_array: np.ndarray, block_index: int, channel: int=1):
+    def write_block(self, data_array: np.ndarray, block_index: int, channel: int = 1):
         """Escreve um bloco de dados em uma banda.
 
         :param channel: 
@@ -308,7 +326,7 @@ class RasterData:
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array, block_position[0], block_position[1])
         self.gdal_dataset.FlushCache()
 
-    def write_all(self, data_array: np.ndarray, channel: int=1):
+    def write_all(self, data_array: np.ndarray, channel: int = 1):
         """Write an array to the image starting from the first position."""
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array)
         self.gdal_dataset.FlushCache()
@@ -323,4 +341,3 @@ class RasterData:
             dstSRS=srs)
         gdal.Warp(out_image, self.gdal_dataset, options=options)
         return RasterData(out_image)
-
