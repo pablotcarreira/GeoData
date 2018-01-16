@@ -2,8 +2,9 @@
 import os
 
 import ogr
-from vector_utils import create_ogr_linestring_from_list
 from vectordata import VectorData
+
+from geodata.vector_utils import create_ogr_linestring_from_list
 
 
 def test_create_vectordata_gpkg():

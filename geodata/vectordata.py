@@ -1,6 +1,6 @@
 # Pablo Carreira - 21/03/17
 import os
-from typing import Union
+from typing import Union, Iterator
 
 import ogr
 import osr
@@ -8,7 +8,7 @@ import osr
 
 class VectorData:
     def __init__(self, src_file: str, ogr_format: str=None, srs: Union[str, int, osr.SpatialReference]=None,
-                 overwrite: bool=False):
+                 overwrite: bool=False, update=False):
         """                
         :param src_file: 
         :param ogr_format: One of OGR compatible formats: http://gdal.org/1.11/ogr/ogr_formats.html
@@ -19,6 +19,7 @@ class VectorData:
         self.src_file = src_file
         self.ogr_datasource = None
         self.ogr_format = ogr_format
+        self.update = update
 
         # Set the srs.
         if isinstance(srs, osr.SpatialReference):
@@ -45,7 +46,7 @@ class VectorData:
 
     def open_file(self) -> None:
         """Opens the vector file."""
-        ogr_datasource = ogr.Open(self.src_file)
+        ogr_datasource = ogr.Open(self.src_file, 1 if self.update else 0)
         if not ogr_datasource:
             raise IOError("Can't open file: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
@@ -72,7 +73,7 @@ class VectorData:
         self.layers[layer_name].CreateField(id_field)
         return self.layers[layer_name]
 
-    def get_features_iterator(self) -> ogr.Layer:
+    def get_features_iterator(self) -> Iterator[ogr.Feature]:
         """Returns the first layer."""
         layer = self.ogr_datasource.GetLayerByIndex(0)
         layer.ResetReading()

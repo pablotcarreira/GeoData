@@ -2,7 +2,7 @@
 import hashlib
 from collections import Iterator
 
-from rasterdata import RasterData
+from geodata.rasterdata import RasterData
 
 raster_data = RasterData("tests/data/imagem.tiff")
 

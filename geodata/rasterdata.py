@@ -5,7 +5,7 @@ import gdal
 import numpy as np
 import osr
 
-from srs_utils import create_osr_srs
+from geodata.srs_utils import create_osr_srs
 
 
 class RasterData:
@@ -52,10 +52,15 @@ class RasterData:
         """
         return self.rows, self.cols
 
-    def change_resolution(self, new_pixel_size: float, out_image: str) -> "RasterData":
+    def change_resolution(self, new_pixel_size: float, out_image: str,
+                          metodo=gdal.GRIORA_NearestNeighbour) -> "RasterData":
         """ Change the real world size of the image pixel."""
-        options = gdal.WarpOptions(xRes=new_pixel_size, yRes=new_pixel_size, targetAlignedPixels=True)
-        gdal.Warp(out_image, self.gdal_dataset, options=options)
+        options = gdal.WarpOptions(xRes=new_pixel_size,
+                                   yRes=new_pixel_size,
+                                   targetAlignedPixels=True,
+                                   resampleAlg=metodo
+                                   )
+        a = gdal.Warp(out_image, self.gdal_dataset, options=options)
         return RasterData(out_image)
 
     def read_all(self) -> np.ndarray:
@@ -95,11 +100,11 @@ class RasterData:
         coords = [round((oy - yu1) / res),  # y0
                   round((oy - yu0) / res),  # y1
                   round((xu0 - ox) / res),  # x0
-                  round((xu1 - ox) / res),  # x0
+                  round((xu1 - ox) / res),  # x1
                   ]
         # Debug:
-        ty = coords[1] - coords[0]
-        tx = coords[3] - coords[2]
+        # ty = coords[1] - coords[0]
+        # tx = coords[3] - coords[2]
         return self.read_block_by_coordinates(*coords)
 
     # noinspection PyTypeChecker
@@ -121,7 +126,7 @@ class RasterData:
         """Lê meta informações do arquivo."""
         gdal_dataset = gdal.Open(self.src_image, gdal.GA_Update if self.write_enabled else gdal.GA_ReadOnly)
         if not gdal_dataset:
-            raise IOError("Erro ao abrir o arquivo ou arquivo inexistente.")
+            raise IOError("Erro ao abrir o arquivo ou arquivo inexistente: " + self.src_image)
 
         self.gdal_dataset = gdal_dataset
 
