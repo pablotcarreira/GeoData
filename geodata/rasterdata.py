@@ -32,15 +32,27 @@ class RasterData:
         self.src_image = img_file
         self._load_metadata()  # May be lazy?
 
-    def __eq__(self, other: 'RasterData') -> bool:
+    def compare(self, other: "RasterData")->None:
+        """Prints a comparison of this and other RasterData"""
+        print("Rows", self.rows, other.rows)
+        print("Cols", self.cols, other.cols)
+        print("Block size", self.block_size, other.block_size)
+        print("Origin", self.origem, other.origem)
+        print("Pixel size", self.pixel_size, other.pixel_size)
+
+    def __eq__(self, other: 'RasterData')->bool:
+        """Check equality based on rols, cols, origin, pizel size
+        and spatial reference system. Don't check block size.
+
+        :param other: Other RasterData
+        :return:
+        """
         # Estas 3 linhas garantem a comparação correta da referência espacial.
         spatial_self = osr.SpatialReference(self.proj)
         spatial_other = osr.SpatialReference(other.proj)
         same_spatial = spatial_self.IsSame(spatial_other)
-
         return (self.rows == other.rows and
                 self.cols == other.cols and
-                self.block_size == other.block_size and
                 self.origem == other.origem and
                 self.pixel_size == other.pixel_size and
                 same_spatial)

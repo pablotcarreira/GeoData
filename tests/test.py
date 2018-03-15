@@ -87,6 +87,7 @@ def test_read_all():
 
 
 if __name__ == '__main__':
+    test_clone()
     # test_read_all()
-    test_set_projection()
+    # test_set_projection()
     # test_create()
