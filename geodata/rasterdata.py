@@ -350,7 +350,7 @@ class RasterData:
     def set_srs(self, srs: Union[osr.SpatialReference, int, str]):
         """Set the spatial reference system for this instance."""
         srs = create_osr_srs(srs)
-        self.gdal_dataset.SetProjetction(srs)
+        self.gdal_dataset.SetProjection(srs.ExportToWkt())
         self.proj = self.gdal_dataset.GetProjection()
 
     def reproject(self, out_image: str, dst_srs: Union[osr.SpatialReference, int, str])->"RasterData":

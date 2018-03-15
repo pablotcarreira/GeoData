@@ -1,9 +1,10 @@
 # Pablo Carreira - 08/03/17
 import hashlib
+import os
 from collections import Iterator
-from os import path
 
 from geodata.rasterdata import RasterData
+from geodata.srs_utils import create_osr_srs
 
 raster_data = RasterData("tests/data/imagem.tiff")
 
@@ -58,17 +59,25 @@ def test_write():
 
 
 def test_create():
-    img_path = path.abspath("tests/data/test_image.tif")
+    img_path = os.path.abspath("tests/data/test_image.tif")
+    try:
+        os.remove(img_path)
+    except FileNotFoundError:
+        pass
     a = RasterData.create(img_path, 10, 10, 1, 0, 0)
     assert isinstance(a, RasterData)
 
 
 def test_set_projection():
-    img_path = path.abspath("tests/data/test_image.tif")
-    a = RasterData.create(img_path, 10, 10, 1, 0, 0)
-    source_raster = RasterData(img_path, write_enabled=True)
+    img_path = os.path.abspath("tests/data/test_image.tif")
+    try:
+        os.remove(img_path)
+    except FileNotFoundError:
+        pass
+    source_raster = RasterData.create(img_path, 10, 10, 1, 0, 0)
     source_raster.set_srs(4326)
-    print(source_raster.proj)
+    srs = create_osr_srs(source_raster.proj)
+    assert srs.GetAttrValue("AUTHORITY", 1) == '4326'
 
 
 def test_read_all():
