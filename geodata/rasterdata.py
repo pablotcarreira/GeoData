@@ -1,5 +1,5 @@
 # Pablo Carreira - 08/03/17
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Union
 
 import gdal
 import numpy as np
@@ -336,7 +336,13 @@ class RasterData:
         self.gdal_dataset.GetRasterBand(channel).WriteArray(data_array)
         self.gdal_dataset.FlushCache()
 
-    def reproject(self, out_image, dst_srs) -> "RasterData":
+    def set_srs(self, srs: Union[osr.SpatialReference, int, str]):
+        """Set the spatial reference system for this instance."""
+        srs = create_osr_srs(srs)
+        self.gdal_dataset.SetProjetction(srs)
+        self.proj = self.gdal_dataset.GetProjection()
+
+    def reproject(self, out_image: str, dst_srs: Union[osr.SpatialReference, int, str])->"RasterData":
         """Changes this dataset projection and creates a new file.
         Returns a new RasterData referencing the new file.
         """

@@ -78,7 +78,7 @@ class ArraySampler:
         return selected, not_selected
 
     def predict_samples_sizes(self, img_shape, block_size: Sequence):
-        """Given an input shape and a block size, predict the size of selected and not selected samples list."""
+        """Given an src_img shape and a block size, predict the size of selected and not selected samples list."""
         # Quantos blocos inteiros cabem, quantos pixels sobram
         n_block_rows, resto_pixel_rows = divmod(img_shape[0], block_size[0])
         n_block_cols, resto_pixel_cols = divmod(img_shape[1], block_size[1])

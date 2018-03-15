@@ -56,6 +56,12 @@ def test_write():
         assert md5 == clone_written
 
 
+def test_set_projection():
+    source_raster = RasterData("tests/data/test_image.tif", write_enabled=True)
+    source_raster.set_srs(4326)
+    print(source_raster.proj)
+
+
 def test_read_all():
     source_raster = RasterData("tests/data/imagem.tiff")
     array = source_raster.read_all()
@@ -63,4 +69,5 @@ def test_read_all():
 
 
 if __name__ == '__main__':
-    test_read_all()
+    # test_read_all()
+    test_set_projection()
