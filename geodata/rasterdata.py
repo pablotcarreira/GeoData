@@ -45,6 +45,17 @@ class RasterData:
                 self.pixel_size == other.pixel_size and
                 same_spatial)
 
+    @classmethod
+    def create(cls, img_file, rows, cols, pixel_size, xmin, ymin):
+        """Creates a new float32 raster on the disk and returns it."""
+        gdal_driver = gdal.GetDriverByName('GTiff')
+        raster = gdal_driver.Create(img_file, cols, rows, 1, gdal.GDT_Float32)
+        if raster is None:
+            raise RuntimeError("Error creating Gdal raster.")
+        raster.SetGeoTransform((xmin, pixel_size, 0, ymin, 0, pixel_size))
+        del raster
+        return cls(img_file)
+
     @property
     def shape(self) -> Tuple[int, int]:
         """Image shape (rows, cols).
