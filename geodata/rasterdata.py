@@ -58,7 +58,7 @@ class RasterData:
                 same_spatial)
 
     @classmethod
-    def create(cls, img_file, rows, cols, pixel_size, xmin, ymin):
+    def create(cls, img_file: str, rows: int, cols: int, pixel_size: float, xmin: float, ymin: float):
         """Creates a new float32 raster on the disk and returns it."""
         gdal_driver = gdal.GetDriverByName('GTiff')
         raster = gdal_driver.Create(img_file, cols, rows, 1, gdal.GDT_Float32)
@@ -75,14 +75,11 @@ class RasterData:
         """
         return self.rows, self.cols
 
-    def change_resolution(self, new_pixel_size: float, out_image: str,
-                          metodo=gdal.GRIORA_NearestNeighbour) -> "RasterData":
+    def change_resolution(self, new_pixel_size: float, out_image: str) -> "RasterData":
         """ Change the real world size of the image pixel."""
         options = gdal.WarpOptions(xRes=new_pixel_size,
                                    yRes=new_pixel_size,
-                                   targetAlignedPixels=True,
-                                   resampleAlg=metodo
-                                   )
+                                   targetAlignedPixels=True)
         a = gdal.Warp(out_image, self.gdal_dataset, options=options)
         return RasterData(out_image)
 
