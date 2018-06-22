@@ -1,5 +1,5 @@
 # Pablo Carreira
-from geodata.objetos import BBox
+from geodata.geo_objects import BBox
 
 
 def test_bbox():
