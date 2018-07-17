@@ -2,9 +2,10 @@
 
 import json
 
-import ogr
+from osgeo import ogr, osr
 
 ogr.UseExceptions()
+
 
 def create_ogr_linestring_from_list(geom: list) -> ogr.Geometry:
     """Creates a geometry from a Json geometry object"""
@@ -33,3 +34,11 @@ def create_ogr_geom(geom) -> ogr.Geometry:
         ogr_geom = ogr.CreateGeometryFromWkt(geom)
     return ogr_geom
 
+
+def create_osr_transform(src_epsg: int, dst_epsg: int):
+    """Creates an OSR transform from epsg codes."""
+    src_srs = osr.SpatialReference()
+    src_srs.ImportFromEPSG(src_epsg)
+    dst_srs = osr.SpatialReference()
+    dst_srs.ImportFromEPSG(dst_epsg)
+    return osr.CoordinateTransformation(src_srs, dst_srs)
