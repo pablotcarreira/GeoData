@@ -2,8 +2,7 @@
 import os
 from typing import Union, Iterator
 
-import ogr
-import osr
+from osgeo import ogr, osr
 
 
 class VectorData:

@@ -27,7 +27,11 @@ class BBox:
         self.ymax = ymax
         self.xmax = xmax
         self.ymin = ymin
-        self.xmin = xmin        
+        self.xmin = xmin
+
+    def __str__(self):
+        return f"BBox: {self.xmin}, {self.ymin}, {self.xmax}, {self.ymax}"
+        pass
         
     def as_ogr_geometry(self):
         """Get bbox as an ogr geometry."""

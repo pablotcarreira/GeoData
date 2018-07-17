@@ -1,7 +1,7 @@
 # Pablo Carreira - 29/06/17
 from typing import Union
 
-import osr
+from osgeo import osr
 
 
 def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str]) -> osr.SpatialReference:
