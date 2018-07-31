@@ -4,6 +4,8 @@ from typing import Union, Iterator
 
 from osgeo import ogr, osr
 
+from geodata.geo_objects import BBox
+
 
 class VectorData:
     def __init__(self, src_file: str, ogr_format: str=None, srs: Union[str, int, osr.SpatialReference]=None,
@@ -42,6 +44,15 @@ class VectorData:
                 except FileNotFoundError:
                     pass
                 self.create_datasource()
+
+    def get_bbox(self, layer: Union[str, int]=0) -> BBox:
+        """Returns the bounding box for this vector data."""
+        layer = self.ogr_datasource.GetLayer(layer)
+        if layer is None:
+            raise ValueError("Layer not found: {}.".format(layer))
+        extent = layer.GetExtent()
+        print(extent)
+        return BBox(extent[1], extent[0], extent[2], extent[3])
 
     def open_file(self) -> None:
         """Opens the vector file."""

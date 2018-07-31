@@ -1,9 +1,8 @@
 # Pablo Carreira - 08/03/17
 from typing import Iterator, List, Tuple, Union
 
-import gdal
 import numpy as np
-import osr
+from osgeo import gdal, osr
 
 from geodata.srs_utils import create_osr_srs
 
@@ -66,7 +65,7 @@ class RasterData:
             raise RuntimeError("Error creating Gdal raster.")
         raster.SetGeoTransform((xmin, pixel_size, 0, ymin, 0, pixel_size))
         del raster
-        return cls(img_file)
+        return cls(img_file, write_enabled=True)
 
     @property
     def shape(self) -> Tuple[int, int]:

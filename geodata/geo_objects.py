@@ -1,3 +1,4 @@
+from typing import Tuple
 from warnings import warn
 
 
@@ -32,6 +33,11 @@ class BBox:
     def __str__(self):
         return f"BBox: {self.xmin}, {self.ymin}, {self.xmax}, {self.ymax}"
         pass
+
+    @classmethod
+    def create_from_ogr_extent(cls, extent: Tuple):
+        """Create a BBox from an OGR layer extent."""
+        return cls(extent[0], extent[2], extent[1], extent[3])
         
     def as_ogr_geometry(self):
         """Get bbox as an ogr geometry."""
