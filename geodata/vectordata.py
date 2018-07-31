@@ -51,8 +51,7 @@ class VectorData:
         if layer is None:
             raise ValueError("Layer not found: {}.".format(layer))
         extent = layer.GetExtent()
-        print(extent)
-        return BBox(extent[1], extent[0], extent[2], extent[3])
+        return BBox.create_from_ogr_extent(extent)
 
     def open_file(self) -> None:
         """Opens the vector file."""

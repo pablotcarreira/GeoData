@@ -9,11 +9,6 @@ except ImportError:
     warn("OGR not available")
 
 
-def ogr_required(f):
-    """A dacorator to decorate functions or methods that requires OGR."""
-    pass
-
-
 class BBox:
     __slots__ = ['xmin', 'ymin', 'xmax', 'ymax']
 
