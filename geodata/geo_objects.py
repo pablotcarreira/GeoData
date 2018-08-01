@@ -27,7 +27,10 @@ class BBox:
 
     def __str__(self):
         return f"BBox: {self.xmin}, {self.ymin}, {self.xmax}, {self.ymax}"
-        pass
+
+    def __iter__(self):
+        """This magic method allows the BBox to be cast as a sequence."""
+        return iter((self.xmin, self.ymin, self.xmax, self.ymax))
 
     @classmethod
     def create_from_ogr_extent(cls, extent: Tuple):
@@ -46,3 +49,6 @@ class BBox:
         poly_envelope.AddGeometry(ring)
         poly_envelope.FlattenTo2D()
         return poly_envelope
+
+    def as_tuple(self):
+        pass
