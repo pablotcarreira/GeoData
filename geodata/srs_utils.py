@@ -9,7 +9,7 @@ def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str]) -> osr.Spatial
     If the srs is already an osr.SpatialReference, return a clone.
     """
     if isinstance(in_srs, osr.SpatialReference):
-        srs = in_srs.clone()
+        srs = in_srs.Clone()
     elif isinstance(in_srs, int):
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(in_srs)

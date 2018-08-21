@@ -1,5 +1,5 @@
 # Pablo Carreira - 08/03/17
-from typing import Iterator, List, Tuple, Union
+from typing import Iterator, List, Tuple, Union, Sequence
 
 import numpy as np
 from osgeo import gdal, osr
@@ -57,13 +57,18 @@ class RasterData:
                 same_spatial)
 
     @classmethod
-    def create(cls, img_file: str, rows: int, cols: int, pixel_size: float, xmin: float, ymin: float):
-        """Creates a new float32 raster on the disk and returns it."""
+    def create(cls, img_file: str, rows: int, cols: int, pixel_size: Union[int, float, Sequence], 
+               xmin: float, ymin: float, data_type=gdal.GDT_Float32):
+        """Creates a new raster on the disk and returns it."""
+        if isinstance(pixel_size, (int, float)):
+            pixel_size = (pixel_size, -pixel_size)
+            print("paaaaaaaaaaaaaaaaaaaaaaaa!")
+                    
         gdal_driver = gdal.GetDriverByName('GTiff')
-        raster = gdal_driver.Create(img_file, cols, rows, 1, gdal.GDT_Float32)
+        raster = gdal_driver.Create(img_file, cols, rows, 1, data_type)
         if raster is None:
             raise RuntimeError("Error creating Gdal raster.")
-        raster.SetGeoTransform((xmin, pixel_size, 0, ymin, 0, pixel_size))
+        raster.SetGeoTransform((xmin, pixel_size[0], 0, ymin, 0, pixel_size[1]))
         del raster
         return cls(img_file, write_enabled=True)
 

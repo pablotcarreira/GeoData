@@ -36,14 +36,7 @@ class VectorData:
         if file_exists and not overwrite:
             self.open_file()
         else:
-            if ogr_format is None:
-                raise ValueError("File format not specified for the new file.")
-            else:
-                try:
-                    os.remove(src_file)
-                except FileNotFoundError:
-                    pass
-                self.create_datasource()
+            raise NotImplementedError("Not a file. Use VectorData.create() to create a new file.")
 
     def get_bbox(self, layer: Union[str, int]=0) -> BBox:
         """Returns the bounding box for this vector data."""
@@ -51,7 +44,8 @@ class VectorData:
         if layer is None:
             raise ValueError("Layer not found: {}.".format(layer))
         extent = layer.GetExtent()
-        return BBox.create_from_ogr_extent(extent)
+        srs = layer.GetSpatialRef().ExportToWkt()
+        return BBox.create_from_ogr_extent(extent, srs)
 
     def open_file(self) -> None:
         """Opens the vector file."""
@@ -59,6 +53,7 @@ class VectorData:
         if not ogr_datasource:
             raise IOError("Can't open file: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
+
 
     def create_datasource(self) -> None:
         """Creates the OGR datasource (creates a new geographic file) using the format specified by
