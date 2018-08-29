@@ -36,7 +36,7 @@ class VectorData:
         if file_exists and not overwrite:
             self.open_file()
         else:
-            raise NotImplementedError("Not a file. Use VectorData.create() to create a new file.")
+            raise NotImplementedError(f"Not a file: {src_file}. \n Use VectorData.create() to create a new file.")
 
     def get_bbox(self, layer: Union[str, int]=0) -> BBox:
         """Returns the bounding box for this vector data."""

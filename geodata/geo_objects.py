@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -31,7 +31,7 @@ class BBox:
 
         # A geometry é a sequência de pontos que reprentam o retângulo, em um determinado srs.
         # esta geometry permanece inalterada durante a vida do bbox.
-        self._geometry = ((xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymax))
+        self._geometry = ((xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymin))
         self._wkt_srs = wkt_srs
 
     @property
@@ -46,15 +46,21 @@ class BBox:
         return iter((self.xmin, self.ymin, self.xmax, self.ymax))
 
     # def transform_srs(self, new_srs: Union[str, int, osr.SpatialReference]):
-    def transform_srs(self, new_srs: str):
+    def transform_srs(self, new_srs: Union[str, int]):
         """Transform this BBox to a srs and returns a new BBox."""
+
         if self._wkt_srs is None:
             raise AttributeError("SRS not defined for this BBox.")
 
         src_srs = osr.SpatialReference()
         src_srs.ImportFromWkt(self._wkt_srs)
+
         dst_srs = osr.SpatialReference()
-        dst_srs.ImportFromWkt(new_srs)
+        if isinstance(new_srs, str):
+            dst_srs.ImportFromWkt(new_srs)
+        elif isinstance(new_srs, int):
+            dst_srs.ImportFromEPSG(new_srs)
+
         transform = osr.CoordinateTransformation(src_srs, dst_srs)
         new_geom = transform.TransformPoints(self._geometry)
         # Get bbox from new geom:
