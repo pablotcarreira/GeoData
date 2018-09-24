@@ -4,6 +4,7 @@ from typing import Iterator, List, Tuple, Union, Sequence
 import numpy as np
 from osgeo import gdal, osr
 
+from geodata.geo_objects import BBox
 from geodata.srs_utils import create_osr_srs
 
 
@@ -145,6 +146,12 @@ class RasterData:
         if not self._block_list:
             self._block_list = self._create_blocks_list()
         return self._block_list
+
+    def get_bbox(self):
+        """Pega o bbox da imagem."""
+        xmax = self.origem[0] + self.cols * self.pixel_size
+        ymin = self.origem[1] - self.rows * self.pixel_size
+        return BBox(self.origem[0], ymin, xmax, self.origem[1], wkt_srs=self.wkt_srs)
 
     def _load_metadata(self):
         """Lê meta informações do arquivo."""
@@ -365,6 +372,10 @@ class RasterData:
         srs = create_osr_srs(srs)
         self.gdal_dataset.SetProjection(srs.ExportToWkt())
         self.proj = self.gdal_dataset.GetProjection()
+
+    @property
+    def wkt_srs(self):
+        return self.gdal_dataset.GetProjection()
 
     def reproject(self, out_image: str, dst_srs: Union[osr.SpatialReference, int, str])->"RasterData":
         """Changes this dataset projection and creates a new file.
