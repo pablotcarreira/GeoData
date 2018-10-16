@@ -377,13 +377,20 @@ class RasterData:
     def wkt_srs(self):
         return self.gdal_dataset.GetProjection()
 
-    def reproject(self, out_image: str, dst_srs: Union[osr.SpatialReference, int, str])->"RasterData":
+    def reproject(self, out_image: str, dst_srs: Union[osr.SpatialReference, int, str],
+                  memory: bool=False)->"RasterData":
         """Changes this dataset projection and creates a new file.
         Returns a new RasterData referencing the new file.
+
+        :param out_image:
+        :param dst_srs:
+        :param memory: Use memory driver.
         """
         # Ver docstring para mais opções.
         srs = create_osr_srs(dst_srs)
-        options = gdal.WarpOptions(
-            dstSRS=srs)
-        gdal.Warp(out_image, self.gdal_dataset, options=options)
+        if memory:
+            gdal.Warp("MEM", self.gdal_dataset, dstSRS=srs, format="MEM")
+        else:
+            gdal.Warp(out_image, self.gdal_dataset, dstSRS=srs)
+
         return RasterData(out_image)
