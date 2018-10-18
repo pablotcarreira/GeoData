@@ -90,4 +90,4 @@ class BBox:
         return poly_envelope
 
     def as_tuple(self):
-        pass
+        return self.xmin, self.ymin, self.xmax, self.ymax

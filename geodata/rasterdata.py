@@ -19,17 +19,26 @@ class RasterData:
     proj = None
     origem = None
     pixel_size = None
+    gdal_dataset = None
 
-    def __init__(self, img_file: str, write_enabled: bool = False, verbose: bool = False):
+    def __init__(self, img_file: Union[str, gdal.Dataset], write_enabled: bool = False, verbose: bool = False):
         """
-        :param img_file: Caminho para o arquivo tiff da imagem.
+        :param img_file: Caminho para o arquivo tiff da imagem ou um gdal dataset.
         :param write_enabled: Habilita a escrita para o arquivo. 
         """
         #: Caminho para o arquivo tiff da imagem (fonte de dados).
         self.verbose = verbose
         self.img_file = img_file
         self.write_enabled = write_enabled
-        self.src_image = img_file
+
+        if isinstance(img_file, gdal.Dataset):
+            self.gdal_dataset = img_file
+            self.src_image = None
+        elif isinstance(img_file, str):
+            self.src_image = img_file
+        else:
+            raise TypeError("Wrong type for img_file, must be str or gdal.Dataset.")
+
         self._load_metadata()  # May be lazy?
 
     def compare(self, other: "RasterData")->None:
@@ -155,11 +164,13 @@ class RasterData:
 
     def _load_metadata(self):
         """Lê meta informações do arquivo."""
-        gdal_dataset = gdal.Open(self.src_image, gdal.GA_Update if self.write_enabled else gdal.GA_ReadOnly)
-        if not gdal_dataset:
-            raise IOError("Erro ao abrir o arquivo ou arquivo inexistente: " + self.src_image)
-
-        self.gdal_dataset = gdal_dataset
+        if isinstance(self.gdal_dataset, gdal.Dataset):
+            gdal_dataset = self.gdal_dataset
+        else:
+            gdal_dataset = gdal.Open(self.src_image, gdal.GA_Update if self.write_enabled else gdal.GA_ReadOnly)
+            if not gdal_dataset:
+                raise IOError("Erro ao abrir o arquivo ou arquivo inexistente: " + self.src_image)
+            self.gdal_dataset = gdal_dataset
 
         # Informacoes gerais.
         self.cols = gdal_dataset.RasterXSize
@@ -389,8 +400,7 @@ class RasterData:
         # Ver docstring para mais opções.
         srs = create_osr_srs(dst_srs)
         if memory:
-            gdal.Warp("MEM", self.gdal_dataset, dstSRS=srs, format="MEM")
+            return RasterData(gdal.Warp("MEM", self.gdal_dataset, dstSRS=srs, format="MEM"))
         else:
             gdal.Warp(out_image, self.gdal_dataset, dstSRS=srs)
-
-        return RasterData(out_image)
+            return RasterData(out_image)
