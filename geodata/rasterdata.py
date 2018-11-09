@@ -1,4 +1,5 @@
 # Pablo Carreira - 08/03/17
+from math import ceil, floor
 from typing import Iterator, List, Tuple, Union, Sequence
 
 import numpy as np
@@ -123,6 +124,82 @@ class RasterData:
             channel = self.gdal_dataset.GetRasterBand(item + 1)
             channels_blocks.append(channel.ReadAsArray(x0, y0, x_size, y_size))
         return np.dstack(channels_blocks)
+
+    def get_bbox_position_within_image(self, other_bbox: BBox, allow_partial: bool=False):
+        """Claculate the position of a bbox within the image (in pixels).
+
+        Both must be in the same coordinate system.
+
+        :param other_bbox: Other bbox.
+        :param allow_partial: Allows the function to return partial coverage, if not raises RuntimeError.
+        """
+        this_bbox = self.get_bbox()
+        pixel_size = self.pixel_size
+
+        if this_bbox.wkt_srs != other_bbox.wkt_srs:
+            raise RuntimeError("Must be in the same SRS.")
+
+        # Detect out of bounds:
+        out_of_bounds = False
+        if other_bbox.xmax <= this_bbox.xmin:
+            out_of_bounds = True
+        elif other_bbox.xmin >= this_bbox.xmax:
+            out_of_bounds = True
+        elif other_bbox.ymax <= this_bbox.ymin:
+            out_of_bounds = True
+        elif other_bbox.ymin >= this_bbox.ymax:
+            out_of_bounds = True
+        if out_of_bounds:
+            raise RuntimeError("Bbox totaly out of bounds.")
+
+        # Situations where the other bbox is partially covering this bbox.
+        origin_y, origin_x = None, None
+        displacement_h, displacement_v = None, None
+        limit_x = ceil
+        limit_y = ceil
+        patial = False
+        if other_bbox.ymax > this_bbox.ymax:
+            other_bbox.ymax = this_bbox.ymax
+            origin_y = this_bbox.ymax
+            displacement_v = 0
+            patial = True
+        if other_bbox.ymin < this_bbox.ymin:
+            other_bbox.ymin = this_bbox.ymin
+            limit_y = floor
+            patial = True
+        if other_bbox.xmax > this_bbox.xmax:
+            other_bbox.xmax = this_bbox.xmax
+            limit_x = floor
+            patial = True
+        if other_bbox.xmin < this_bbox.xmin:
+            other_bbox.xmin = this_bbox.xmin
+            origin_x = this_bbox.xmin
+            displacement_h = 0
+            patial = True
+
+        if patial and not allow_partial:
+            raise RuntimeError("Other bbox partially out of the ")
+
+        # Como a imagem tem origem no topo esquerdo, o deslocamento deve ser da esquerda e do topo:
+        # floor é usado para que sobre parte de um pixel para cima e para a esquerda, em vez de faltar.
+        # Isso é aplicado apenas quando a área de interesse não excede as bordas.
+        if displacement_h is None:
+            displacement_h = floor((other_bbox.xmin - this_bbox.xmin) / pixel_size)
+        if displacement_v is None:
+            displacement_v = floor((this_bbox.ymax - other_bbox.ymax) / pixel_size)
+
+        # Como é feito este mini deslocamento, passamos a usar estas novas coordenadas como
+        # coordenadas de origem do pedaço (apenas quando o pedaço ainda não foi determinado):
+        if origin_x is None:
+            origin_x = this_bbox.xmin + displacement_h * pixel_size
+        if origin_y is None:
+            origin_y = this_bbox.ymax - displacement_v * pixel_size  # no topo esquerdo, invertido.
+        # (lembre-se que a o sistema de referência (SR) da imagem tem origem no canto superior esquerdo e o geográfico
+        # no canto inferior esquerdo.
+        block_width = limit_x((other_bbox.xmax - origin_x) / pixel_size)
+        block_height = limit_y((origin_y - other_bbox.ymin) / pixel_size)
+        # origem_y = origem_y - altura_px_pedaco * tamanho_pixel  # no topo esquedo, correto.
+        return displacement_h, displacement_v, block_width, block_height, origin_x, origin_y
 
     def read_block_by_utm_coordinates(self, xu0, xu1, yu0, yu1):
         """Get a block by utm coordinates.
