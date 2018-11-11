@@ -55,11 +55,14 @@ class BBox:
         src_srs = osr.SpatialReference()
         src_srs.ImportFromWkt(self._wkt_srs)
 
-        dst_srs = osr.SpatialReference()
-        if isinstance(new_srs, str):
-            dst_srs.ImportFromWkt(new_srs)
-        elif isinstance(new_srs, int):
-            dst_srs.ImportFromEPSG(new_srs)
+        if isinstance(new_srs, osr.SpatialReference):
+            dst_srs = new_srs
+        else:
+            dst_srs = osr.SpatialReference()
+            if isinstance(new_srs, str):
+                dst_srs.ImportFromWkt(new_srs)
+            elif isinstance(new_srs, int):
+                dst_srs.ImportFromEPSG(new_srs)
 
         transform = osr.CoordinateTransformation(src_srs, dst_srs)
         new_geom = transform.TransformPoints(self._geometry)

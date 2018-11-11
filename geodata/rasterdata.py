@@ -178,7 +178,7 @@ class RasterData:
             patial = True
 
         if patial and not allow_partial:
-            raise RuntimeError("Other bbox partially out of the ")
+            raise RuntimeError("Other bbox partially out of the image extent, you may use allow_partial=True.")
 
         # Como a imagem tem origem no topo esquerdo, o deslocamento deve ser da esquerda e do topo:
         # floor é usado para que sobre parte de um pixel para cima e para a esquerda, em vez de faltar.
