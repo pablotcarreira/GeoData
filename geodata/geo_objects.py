@@ -46,7 +46,7 @@ class BBox:
         return iter((self.xmin, self.ymin, self.xmax, self.ymax))
 
     # def transform_srs(self, new_srs: Union[str, int, osr.SpatialReference]):
-    def transform_srs(self, new_srs: Union[str, int]):
+    def transform_srs(self, new_srs: Union[str, int, osr.SpatialReference]):
         """Transform this BBox to a srs and returns a new BBox."""
 
         if self._wkt_srs is None:
