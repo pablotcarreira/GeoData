@@ -125,7 +125,7 @@ class RasterData:
             channels_blocks.append(channel.ReadAsArray(x0, y0, x_size, y_size))
         return np.dstack(channels_blocks)
 
-    def get_bbox_position_within_image(self, other_bbox: BBox, allow_partial: bool=False):
+    def get_bbox_position_within_image(self, other_bbox: BBox, allow_partial: bool=False, allow_any_srs=False):
         """Claculate the position of a bbox within the image (in pixels).
 
         Both must be in the same coordinate system.
@@ -136,7 +136,7 @@ class RasterData:
         this_bbox = self.get_bbox()
         pixel_size = self.pixel_size
 
-        if this_bbox.wkt_srs != other_bbox.wkt_srs:
+        if this_bbox.wkt_srs != other_bbox.wkt_srs and not allow_any_srs:
             raise RuntimeError("Must be in the same SRS.")
 
         # Detect out of bounds:
@@ -157,22 +157,28 @@ class RasterData:
         displacement_h, displacement_v = None, None
         limit_x = ceil
         limit_y = ceil
-        patial = False
-        if other_bbox.ymax > this_bbox.ymax:
-            other_bbox.ymax = this_bbox.ymax
+        patial = False        
+        
+        obb_ymax = other_bbox.ymax
+        obb_ymin = other_bbox.ymin
+        obb_xmax = other_bbox.xmax
+        obb_xmin = other_bbox.xmin
+        
+        if obb_ymax > this_bbox.ymax:
+            obb_ymax = this_bbox.ymax
             origin_y = this_bbox.ymax
             displacement_v = 0
             patial = True
-        if other_bbox.ymin < this_bbox.ymin:
-            other_bbox.ymin = this_bbox.ymin
+        if obb_ymin < this_bbox.ymin:
+            obb_ymin = this_bbox.ymin
             limit_y = floor
             patial = True
-        if other_bbox.xmax > this_bbox.xmax:
-            other_bbox.xmax = this_bbox.xmax
+        if obb_xmax > this_bbox.xmax:
+            obb_xmax = this_bbox.xmax
             limit_x = floor
             patial = True
-        if other_bbox.xmin < this_bbox.xmin:
-            other_bbox.xmin = this_bbox.xmin
+        if obb_xmin < this_bbox.xmin:
+            obb_xmin = this_bbox.xmin
             origin_x = this_bbox.xmin
             displacement_h = 0
             patial = True
@@ -184,9 +190,9 @@ class RasterData:
         # floor é usado para que sobre parte de um pixel para cima e para a esquerda, em vez de faltar.
         # Isso é aplicado apenas quando a área de interesse não excede as bordas.
         if displacement_h is None:
-            displacement_h = floor((other_bbox.xmin - this_bbox.xmin) / pixel_size)
+            displacement_h = floor((obb_xmin - this_bbox.xmin) / pixel_size)
         if displacement_v is None:
-            displacement_v = floor((this_bbox.ymax - other_bbox.ymax) / pixel_size)
+            displacement_v = floor((this_bbox.ymax - obb_ymax) / pixel_size)
 
         # Como é feito este mini deslocamento, passamos a usar estas novas coordenadas como
         # coordenadas de origem do pedaço (apenas quando o pedaço ainda não foi determinado):
@@ -196,8 +202,8 @@ class RasterData:
             origin_y = this_bbox.ymax - displacement_v * pixel_size  # no topo esquerdo, invertido.
         # (lembre-se que a o sistema de referência (SR) da imagem tem origem no canto superior esquerdo e o geográfico
         # no canto inferior esquerdo.
-        block_width = limit_x((other_bbox.xmax - origin_x) / pixel_size)
-        block_height = limit_y((origin_y - other_bbox.ymin) / pixel_size)
+        block_width = limit_x((obb_xmax - origin_x) / pixel_size)
+        block_height = limit_y((origin_y - obb_ymin) / pixel_size)
         # origem_y = origem_y - altura_px_pedaco * tamanho_pixel  # no topo esquedo, correto.
         return displacement_h, displacement_v, block_width, block_height, origin_x, origin_y
 
