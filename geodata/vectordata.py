@@ -54,7 +54,6 @@ class VectorData:
             raise IOError("Can't open file: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
 
-
     def create_datasource(self) -> None:
         """Creates the OGR datasource (creates a new geographic file) using the format specified by
         self.ogr_format.

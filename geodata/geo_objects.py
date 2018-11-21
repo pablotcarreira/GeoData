@@ -64,6 +64,7 @@ class BBox:
             elif isinstance(new_srs, int):
                 dst_srs.ImportFromEPSG(new_srs)
 
+        # FIXME: Só funciona quando converte de wgs84/lat-lon para outra coisa.
         transform = osr.CoordinateTransformation(src_srs, dst_srs)
         new_geom = transform.TransformPoints(self._geometry)
         # Get bbox from new geom:
@@ -94,3 +95,32 @@ class BBox:
 
     def as_tuple(self):
         return self.xmin, self.ymin, self.xmax, self.ymax
+
+
+class RasterDefinition:
+    __slots__ = ["rows", "cols", "xmin", "ymax", "xres", "yres", "srs"]
+
+    def __init__(self, rows: int, cols: int, xmin: float, ymax: float, xres: float, yres: float, srs: str):
+        """A set of parameters that defines a raster image geometry.
+        Used for images with top left origin.
+
+        yres is a negative number.
+
+        :param rows: Image height.
+        :param cols: Image width.
+        :param xmin: Minimum x coordinate of origin
+        :param ymax: Maximum y coordinate of origin
+        :param xres: Pixel size in x axis.
+        :param yres: Pixel size in y axis (negative value).
+        :param srs: Spatial reference in WKT format.
+        """
+        self.srs = srs
+        if yres >= 0:
+            raise ValueError("yres should be < 0.")
+
+        self.yres = yres
+        self.xres = xres
+        self.ymax = ymax
+        self.xmin = xmin
+        self.cols = cols
+        self.rows = rows

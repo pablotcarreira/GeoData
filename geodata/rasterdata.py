@@ -1,5 +1,4 @@
 # Pablo Carreira - 08/03/17
-from math import ceil, floor
 from typing import Iterator, List, Tuple, Union, Sequence
 
 import numpy as np
@@ -69,14 +68,13 @@ class RasterData:
 
     @classmethod
     def create(cls, img_file: str, rows: int, cols: int, pixel_size: Union[int, float, Sequence], 
-               xmin: float, ymin: float, data_type=gdal.GDT_Float32):
+               xmin: float, ymin: float, bands=1, data_type=gdal.GDT_Float32):
         """Creates a new raster on the disk and returns it."""
         if isinstance(pixel_size, (int, float)):
             pixel_size = (pixel_size, -pixel_size)
-            print("paaaaaaaaaaaaaaaaaaaaaaaa!")
-                    
+
         gdal_driver = gdal.GetDriverByName('GTiff')
-        raster = gdal_driver.Create(img_file, cols, rows, 1, data_type)
+        raster = gdal_driver.Create(img_file, cols, rows, bands, data_type)
         if raster is None:
             raise RuntimeError("Error creating Gdal raster.")
         raster.SetGeoTransform((xmin, pixel_size[0], 0, ymin, 0, pixel_size[1]))
@@ -155,9 +153,7 @@ class RasterData:
         # Situations where the other bbox is partially covering this bbox.
         origin_y, origin_x = None, None
         displacement_h, displacement_v = None, None
-        limit_x = ceil
-        limit_y = ceil
-        patial = False        
+        patial = False
         
         obb_ymax = other_bbox.ymax
         obb_ymin = other_bbox.ymin
@@ -171,11 +167,9 @@ class RasterData:
             patial = True
         if obb_ymin < this_bbox.ymin:
             obb_ymin = this_bbox.ymin
-            limit_y = floor
             patial = True
         if obb_xmax > this_bbox.xmax:
             obb_xmax = this_bbox.xmax
-            limit_x = floor
             patial = True
         if obb_xmin < this_bbox.xmin:
             obb_xmin = this_bbox.xmin
@@ -190,9 +184,9 @@ class RasterData:
         # floor é usado para que sobre parte de um pixel para cima e para a esquerda, em vez de faltar.
         # Isso é aplicado apenas quando a área de interesse não excede as bordas.
         if displacement_h is None:
-            displacement_h = floor((obb_xmin - this_bbox.xmin) / pixel_size)
+            displacement_h = int((obb_xmin - this_bbox.xmin) / pixel_size)
         if displacement_v is None:
-            displacement_v = floor((this_bbox.ymax - obb_ymax) / pixel_size)
+            displacement_v = int((this_bbox.ymax - obb_ymax) / pixel_size)
 
         # Como é feito este mini deslocamento, passamos a usar estas novas coordenadas como
         # coordenadas de origem do pedaço (apenas quando o pedaço ainda não foi determinado):
@@ -202,9 +196,13 @@ class RasterData:
             origin_y = this_bbox.ymax - displacement_v * pixel_size  # no topo esquerdo, invertido.
         # (lembre-se que a o sistema de referência (SR) da imagem tem origem no canto superior esquerdo e o geográfico
         # no canto inferior esquerdo.
-        block_width = limit_x((obb_xmax - origin_x) / pixel_size)
-        block_height = limit_y((origin_y - obb_ymin) / pixel_size)
+
+        block_width = int((obb_xmax - origin_x) / pixel_size) - 1  # FIXME: -1 Mágico.
+        block_height = int((origin_y - obb_ymin) / pixel_size)
+
         # origem_y = origem_y - altura_px_pedaco * tamanho_pixel  # no topo esquedo, correto.
+
+        #        0 dish,          1disv,        2 width,     3 heigth,     4 orx,     5ory
         return displacement_h, displacement_v, block_width, block_height, origin_x, origin_y
 
     def read_block_by_utm_coordinates(self, xu0, xu1, yu0, yu1):
