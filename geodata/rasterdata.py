@@ -88,13 +88,13 @@ class RasterData:
         """
         return self.rows, self.cols
 
-    def change_resolution(self, new_pixel_size: float, out_image: str=None, memory: bool=False) -> "RasterData":
+    def change_resolution(self, new_pixel_size: float, out_image: str="", memory: bool=False) -> "RasterData":
         """ Change the real world size of the image pixel."""
         options = gdal.WarpOptions(xRes=new_pixel_size,
                                    yRes=new_pixel_size,
                                    targetAlignedPixels=True,
                                    format="MEM" if memory else "GTiff")
-        if not memory and out_image is None:
+        if not memory and out_image == "":
             raise ValueError("Must provide an output image name for gtiff.")
         return RasterData(gdal.Warp(out_image, self.gdal_dataset, options=options))
 
