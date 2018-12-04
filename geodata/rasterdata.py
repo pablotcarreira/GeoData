@@ -67,8 +67,8 @@ class RasterData:
                 same_spatial)
 
     @classmethod
-    def create(cls, img_file: str, rows: int, cols: int, pixel_size: Union[int, float, Sequence], 
-               xmin: float, ymin: float, bands=1, data_type=gdal.GDT_Float32):
+    def create(cls, img_file: str, rows: int, cols: int, pixel_size: Union[int, float, Sequence],
+               xmin: float, ymax: float, bands=1, data_type=gdal.GDT_Float32):
         """Creates a new raster on the disk and returns it."""
         if isinstance(pixel_size, (int, float)):
             pixel_size = (pixel_size, -pixel_size)
@@ -77,7 +77,7 @@ class RasterData:
         raster = gdal_driver.Create(img_file, cols, rows, bands, data_type)
         if raster is None:
             raise RuntimeError("Error creating Gdal raster.")
-        raster.SetGeoTransform((xmin, pixel_size[0], 0, ymin, 0, pixel_size[1]))
+        raster.SetGeoTransform((xmin, pixel_size[0], 0, ymax, 0, pixel_size[1]))
         del raster
         return cls(img_file, write_enabled=True)
 
@@ -136,7 +136,12 @@ class RasterData:
         this_bbox = self.get_bbox()
         pixel_size = self.pixel_size
 
-        if this_bbox.wkt_srs != other_bbox.wkt_srs and not allow_any_srs:
+        # Create SRS for comparison.
+        this_srs, other_srs = osr.SpatialReference(), osr.SpatialReference()
+        this_srs.ImportFromWkt(this_bbox.wkt_srs)
+        other_srs.ImportFromWkt(other_bbox.wkt_srs)
+
+        if not this_srs.IsSame(other_srs) and not allow_any_srs:
             raise RuntimeError("Must be in the same SRS.")
 
         # Detect out of bounds:
