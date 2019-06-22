@@ -24,7 +24,7 @@ class RasterBlock:
                self.valid_data_region[0]:self.valid_data_region[1], self.valid_data_region[2]:self.valid_data_region[3]]
 
     def corta_matriz_por_regiao_valida(self, matriz):
-        """Corta uma outra matriz pela região válida."""
+        """Corta uma outra matriz pela região válida. Útil para reescrever dados transformados para uma saída."""
         return matriz[
                self.valid_data_region[0]:self.valid_data_region[1], self.valid_data_region[2]:self.valid_data_region[3]]
 
