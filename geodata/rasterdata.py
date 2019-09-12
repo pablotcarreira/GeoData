@@ -361,7 +361,7 @@ class RasterData:
             else:
                 yield red_block_data, green_block_data, blue_block_data
 
-    def clone_empty(self, new_img_file: str, bandas: int = 0, data_type=gdal.GDT_Byte) -> 'RasterData':
+    def clone_empty(self, new_img_file: str, bandas: int = 0, data_type=gdal.GDT_Byte, bits=None) -> 'RasterData':
         """Cria uma nova imagem RasterData com as mesmas características desta imagem,
         a nova imagem é vazia e pronta para a escrita.
         A finalidade é criar imagens para a saída de processamentos.
@@ -388,9 +388,15 @@ class RasterData:
         if self.block_size[1] != 1 and ((self.block_size[1] & (self.block_size[1] - 1)) == 0):
             out_block_size[1] = self.block_size[1]
 
-        geotiff_options = ["TILED=YES",
-                           "BLOCKXSIZE=" + str(out_block_size[0]),
-                           "BLOCKYSIZE=" + str(out_block_size[1])]
+        if bits is not None:
+            geotiff_options = ["NBITS=1",
+                               "TILED=YES",
+                               "BLOCKXSIZE=" + str(out_block_size[0]),
+                               "BLOCKYSIZE=" + str(out_block_size[1])]
+        else:
+            geotiff_options = ["TILED=YES",
+                               "BLOCKXSIZE=" + str(out_block_size[0]),
+                               "BLOCKYSIZE=" + str(out_block_size[1])]
 
         new_dataset = gdal_driver.Create(new_img_file,
                                          self.cols, self.rows,
