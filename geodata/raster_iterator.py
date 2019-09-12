@@ -2,8 +2,8 @@
 import collections
 
 import numpy as np
-from rasterdata import RasterData
 
+from geodata import RasterData
 from geodata.raster_utils import mirror_block, MIRROR_TOP, MIRROR_BOTTOM, MIRROR_LEFT, MIRROR_RIGHT, ArraySampler, \
     normalize_channel_range
 
