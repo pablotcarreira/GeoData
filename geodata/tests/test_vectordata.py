@@ -1,5 +1,6 @@
 # Pablo Carreira - 22/06/17
 import os
+from tempfile import NamedTemporaryFile
 
 import ogr
 from vectordata import VectorData
@@ -18,24 +19,15 @@ def test_create_vectordata_gpkg():
 
 
 def test_create_vectordata_shape():
-    src_file = "/home/pablo/Desktop/geo_array/tests/data/vector.shp"
-    try:
-        os.remove(src_file)
-    except FileNotFoundError:
-        pass
-    vector = VectorData(src_file, "ESRI Shapefile", srs=4326, overwrite=True)
-    vector.create_layer()
-    assert os.path.isfile(src_file)
+    with NamedTemporaryFile() as tf:
+        vector = VectorData.create(tf, "ESRI Shapefile", srs=4326, overwrite=True)
+        assert os.path.isfile(tf)
 
 
 def test_create_ogr_linestring():
     linha = [[207603.9472469226, 7798935.968343082], [207604.00814469813, 7798936.151036409]]
     geom = create_ogr_linestring_from_list(linha)
     assert isinstance(geom, ogr.Geometry)
-
-
-
-
 
 
 # def test_create_srs():
@@ -46,6 +38,6 @@ def test_create_ogr_linestring():
 
 
 if __name__ == '__main__':
-    # test_create_vectordata_shape()
+    test_create_vectordata_shape()
     # test_create_srs()
-    test_create_ogr_linestring()
+    # test_create_ogr_linestring()

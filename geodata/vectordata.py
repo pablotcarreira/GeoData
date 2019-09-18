@@ -8,7 +8,7 @@ from geodata.geo_objects import BBox
 
 
 class VectorData:
-    def __init__(self, src_file: str, overwrite: bool = False, update=False):
+    def __init__(self, src_file: str, update=False):
         """                
         :param src_file:
 
@@ -21,11 +21,47 @@ class VectorData:
         self.update = update
         self.srs = None
 
-        file_exists = os.path.isfile(src_file)
-        if file_exists and not overwrite:
-            self.open_file()
-        else:
+        if not os.path.isfile(src_file):
             raise NotImplementedError(f"Not a file: {src_file}. \n Use VectorData.create() to create a new file.")
+        self.open_file()
+
+    @classmethod
+    def create(cls, file_name: str, ogr_format: str, srs: Union[str, int, osr.SpatialReference],
+               geom_type: str = ogr.wkbLineString, overwrite: bool = False):
+        """Creates the OGR datasource (creates a new geographic file) using the format specified.
+
+        :param ogr_format: One of OGR compatible formats: http://gdal.org/1.11/ogr/ogr_formats.html
+        :param srs: Proj4 string, EPSG code or OSR.srs object.
+
+        """
+        file_exists = os.path.isfile(file_name)
+        if file_exists and not overwrite:
+            raise RuntimeError("Arquivo existente. Coloque overwrite=True se quiser sobrescrever.")
+
+        if isinstance(srs, osr.SpatialReference):
+            asrs = srs.clone()
+        elif isinstance(srs, int):
+            asrs = osr.SpatialReference()
+            asrs.ImportFromEPSG(srs)
+        elif isinstance(srs, str):
+            asrs = osr.SpatialReference()
+            asrs.ImportFromWkt(srs)
+        else:
+            raise TypeError("Tipo do SRS não suportado.")
+
+        driver = ogr.GetDriverByName(ogr_format)
+        if not driver:
+            raise ValueError("Can't create OGR driver with this format: {}".format(ogr_format))
+        ogr_datasource = driver.CreateDataSource(file_name)
+        if ogr_datasource is None:
+            raise IOError("Can't create the file in this location: {}".format(file_name))
+
+        camada = ogr_datasource.CreateLayer("camada", asrs, geom_type)
+        camada.CreateField(ogr.FieldDefn("ID", ogr.OFTInteger))
+        del ogr_datasource
+        v = VectorData(file_name, update=True)
+        v.srs = asrs
+        return v
 
     def get_bbox(self, layer: Union[str, int] = 0) -> BBox:
         """Returns the bounding box for this vector data."""
@@ -43,45 +79,10 @@ class VectorData:
             raise IOError("Can't open file: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
 
-    @classmethod
-    def create(cls, file_name: str, ogr_format: str, srs: Union[str, int, osr.SpatialReference],
-               overwrite: bool = False):
-        """Creates the OGR datasource (creates a new geographic file) using the format specified.
-
-        :param ogr_format: One of OGR compatible formats: http://gdal.org/1.11/ogr/ogr_formats.html
-        :param srs: Proj4 string, EPSG code or OSR.srs object.
-
-        """
-        file_exists = os.path.isfile(file_name)
-        if file_exists and not overwrite:
-            raise RuntimeError("Arquivo existente. Coloque overwrite=True se quiser sobrescrever.")
-
-        if isinstance(srs, osr.SpatialReference):
-            srs = srs.clone()
-        elif isinstance(srs, int):
-            srs = osr.SpatialReference()
-            srs.ImportFromEPSG(srs)
-        elif isinstance(srs, str):
-            srs = osr.SpatialReference()
-            srs.ImportFromWkt(srs)
-
-        driver = ogr.GetDriverByName(ogr_format)
-        if not driver:
-            raise ValueError("Can't create OGR driver with this format: {}".format(ogr_format))
-        ogr_datasource = driver.CreateDataSource(file_name)
-        if ogr_datasource is None:
-            raise IOError("Can't create the file in this location: {}".format(file_name))
-
-        v = VectorData(file_name)
-        v.srs = srs
-        return v
-
     def create_layer(self, layer_name: str="1", geom_type: str=ogr.wkbLineString):
         if layer_name in self.layers.keys():
             raise AttributeError("Layer with name {} already exists".format(layer_name))
         self.layers[layer_name] = self.ogr_datasource.CreateLayer(layer_name, self.srs, geom_type)
-        # Cria o campo id, o unico que vai ser usado por enquanto.
-        # FIXME: Deve estar na layer.
         id_field = ogr.FieldDefn("ID", ogr.OFTInteger)
         self.layers[layer_name].CreateField(id_field)
         return self.layers[layer_name]
@@ -92,9 +93,9 @@ class VectorData:
         layer.ResetReading()
         return layer
 
-    def add_feature_to_layer(self, geometry: ogr.Geometry, properties: dict, layer_name: str):
+    def add_feature_to_layer(self, geometry: ogr.Geometry, properties: dict):
         # Fixme - Deve estar na layer, pode estar aqui apenas por um atalho de conveniência.
-        layer = self.layers[layer_name]
+        layer = self.ogr_datasource.GetLayerByIndex(0)
         feature = ogr.Feature(layer.GetLayerDefn())
         feature.SetGeometry(geometry)
         for k, v in properties.items():
