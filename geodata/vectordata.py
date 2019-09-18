@@ -8,29 +8,18 @@ from geodata.geo_objects import BBox
 
 
 class VectorData:
-    def __init__(self, src_file: str, ogr_format: str=None, srs: Union[str, int, osr.SpatialReference]=None,
-                 overwrite: bool=False, update=False):
+    def __init__(self, src_file: str, overwrite: bool = False, update=False):
         """                
-        :param src_file: 
-        :param ogr_format: One of OGR compatible formats: http://gdal.org/1.11/ogr/ogr_formats.html
-        :param srs: Proj4 string, EPSG code or OSR.srs object.
+        :param src_file:
+
         :param overwrite: Aways create a new file.
         """
         self.layers = {}
         self.src_file = src_file
         self.ogr_datasource = None
-        self.ogr_format = ogr_format
+        self.ogr_format = None
         self.update = update
-
-        # Set the srs.
-        if isinstance(srs, osr.SpatialReference):
-            self.srs = srs.clone()
-        elif isinstance(srs, int):
-            self.srs = osr.SpatialReference()
-            self.srs.ImportFromEPSG(srs)
-        elif isinstance(srs, str):
-            self.srs = osr.SpatialReference()
-            self.srs.ImportFromWkt(srs)
+        self.srs = None
 
         file_exists = os.path.isfile(src_file)
         if file_exists and not overwrite:
@@ -38,7 +27,7 @@ class VectorData:
         else:
             raise NotImplementedError(f"Not a file: {src_file}. \n Use VectorData.create() to create a new file.")
 
-    def get_bbox(self, layer: Union[str, int]=0) -> BBox:
+    def get_bbox(self, layer: Union[str, int] = 0) -> BBox:
         """Returns the bounding box for this vector data."""
         layer = self.ogr_datasource.GetLayer(layer)
         if layer is None:
@@ -54,17 +43,38 @@ class VectorData:
             raise IOError("Can't open file: {}".format(self.src_file))
         self.ogr_datasource = ogr_datasource
 
-    def create_datasource(self) -> None:
-        """Creates the OGR datasource (creates a new geographic file) using the format specified by
-        self.ogr_format.
+    @classmethod
+    def create(cls, file_name: str, ogr_format: str, srs: Union[str, int, osr.SpatialReference],
+               overwrite: bool = False):
+        """Creates the OGR datasource (creates a new geographic file) using the format specified.
+
+        :param ogr_format: One of OGR compatible formats: http://gdal.org/1.11/ogr/ogr_formats.html
+        :param srs: Proj4 string, EPSG code or OSR.srs object.
+
         """
-        driver = ogr.GetDriverByName(self.ogr_format)
+        file_exists = os.path.isfile(file_name)
+        if file_exists and not overwrite:
+            raise RuntimeError("Arquivo existente. Coloque overwrite=True se quiser sobrescrever.")
+
+        if isinstance(srs, osr.SpatialReference):
+            srs = srs.clone()
+        elif isinstance(srs, int):
+            srs = osr.SpatialReference()
+            srs.ImportFromEPSG(srs)
+        elif isinstance(srs, str):
+            srs = osr.SpatialReference()
+            srs.ImportFromWkt(srs)
+
+        driver = ogr.GetDriverByName(ogr_format)
         if not driver:
-            raise ValueError("Can't create OGR driver with this format: {}".format(self.ogr_format))
-        ogr_datasource = driver.CreateDataSource(self.src_file)
+            raise ValueError("Can't create OGR driver with this format: {}".format(ogr_format))
+        ogr_datasource = driver.CreateDataSource(file_name)
         if ogr_datasource is None:
-            raise IOError("Can't create the file in this location: {}".format(self.src_file))
-        self.ogr_datasource = ogr_datasource
+            raise IOError("Can't create the file in this location: {}".format(file_name))
+
+        v = VectorData(file_name)
+        v.srs = srs
+        return v
 
     def create_layer(self, layer_name: str="1", geom_type: str=ogr.wkbLineString):
         if layer_name in self.layers.keys():
