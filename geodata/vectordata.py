@@ -63,6 +63,10 @@ class VectorData:
         v.srs = asrs
         return v
 
+    def get_layer(self):
+        """Retorna a camada 0."""
+        return self.ogr_datasource.GetLayerByIndex(0)
+
     def get_bbox(self, layer: Union[str, int] = 0) -> BBox:
         """Returns the bounding box for this vector data."""
         layer = self.ogr_datasource.GetLayer(layer)
