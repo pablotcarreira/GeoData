@@ -72,18 +72,15 @@ class RasterData:
         """Creates a new raster on the disk and returns it."""
         if isinstance(pixel_size, (int, float)):
             pixel_size = (pixel_size, -pixel_size)
-
         if memoria:
             gdal_driver = gdal.GetDriverByName('MEM')
             img_file = "MEM"
         else:
             gdal_driver = gdal.GetDriverByName('GTiff')
-
         raster = gdal_driver.Create(img_file, cols, rows, bands, data_type)
         if raster is None:
             raise RuntimeError("Error creating Gdal raster.")
         raster.SetGeoTransform((xmin, pixel_size[0], 0, ymax, 0, pixel_size[1]))
-        del raster
         if memoria:
             return cls(raster, write_enabled=True)
         else:
