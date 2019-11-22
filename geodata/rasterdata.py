@@ -84,6 +84,7 @@ class RasterData:
         if memoria:
             return cls(raster, write_enabled=True)
         else:
+            del raster
             return cls(img_file, write_enabled=True)
 
     @property

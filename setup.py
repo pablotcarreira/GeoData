@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='geodata',
-      version='0.0.8',
+      version='0.0.9',
       description='OGR/GDAL High level abstraction.',
       license='BSD',
       packages=['geodata', 'geodata.tests'],
