@@ -68,12 +68,17 @@ class RasterData:
 
     @classmethod
     def create(cls, img_file: str, rows: int, cols: int, pixel_size: Union[int, float, Sequence],
-               xmin: float, ymax: float, bands=1, data_type=gdal.GDT_Float32):
+               xmin: float, ymax: float, bands=1, data_type=gdal.GDT_Float32, memoria=False):
         """Creates a new raster on the disk and returns it."""
         if isinstance(pixel_size, (int, float)):
             pixel_size = (pixel_size, -pixel_size)
 
-        gdal_driver = gdal.GetDriverByName('GTiff')
+        if memoria:
+            gdal_driver = gdal.GetDriverByName('MEM')
+            img_file = "MEM"
+        else:
+            gdal_driver = gdal.GetDriverByName('GTiff')
+
         raster = gdal_driver.Create(img_file, cols, rows, bands, data_type)
         if raster is None:
             raise RuntimeError("Error creating Gdal raster.")
