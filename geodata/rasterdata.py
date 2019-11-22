@@ -84,7 +84,10 @@ class RasterData:
             raise RuntimeError("Error creating Gdal raster.")
         raster.SetGeoTransform((xmin, pixel_size[0], 0, ymax, 0, pixel_size[1]))
         del raster
-        return cls(img_file, write_enabled=True)
+        if memoria:
+            return cls(raster, write_enabled=True)
+        else:
+            return cls(img_file, write_enabled=True)
 
     @property
     def shape(self) -> Tuple[int, int]:
