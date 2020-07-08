@@ -4,7 +4,7 @@ from typing import Iterator, List, Tuple, Union, Sequence
 import numpy as np
 from osgeo import gdal, osr
 
-from geodata.geo_objects import BBox
+from geodata.geo_objects import BBox, RasterDefinition
 from geodata.srs_utils import create_osr_srs
 
 
@@ -41,7 +41,12 @@ class RasterData:
 
         self._load_metadata()  # May be lazy?
 
-    def compare(self, other: "RasterData")->None:
+    @property
+    def raster_definition(self):
+        """Retorna o objeto RasterDefinition com as características deste raster."""
+        return RasterDefinition(self.rows, self.cols, self.origem[0], self.origem[1], self.pixel_size, -self.pixel_size, self.wkt_srs)
+
+    def compare(self, other: "RasterData") -> None:
         """Prints a comparison of this and other RasterData"""
         print("Rows", self.rows, other.rows)
         print("Cols", self.cols, other.cols)
@@ -49,7 +54,7 @@ class RasterData:
         print("Origin", self.origem, other.origem)
         print("Pixel size", self.pixel_size, other.pixel_size)
 
-    def __eq__(self, other: 'RasterData')->bool:
+    def __eq__(self, other: 'RasterData') -> bool:
         """Check equality based on rols, cols, origin, pizel size
         and spatial reference system. Don't check block size.
 
