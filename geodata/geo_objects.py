@@ -3,6 +3,8 @@ from warnings import warn
 
 import numpy as np
 
+from geodata.srs_utils import create_osr_srs
+
 try:
     # noinspection PyUnresolvedReferences
     from osgeo import ogr, osr
@@ -33,6 +35,10 @@ class BBox:
         # esta geometry permanece inalterada durante a vida do bbox.
         self._geometry = ((xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymin))
         self._wkt_srs = wkt_srs
+
+    @property
+    def srs(self) -> osr.SpatialReference:
+        return create_osr_srs(self.wkt_srs)
 
     @property
     def wkt_srs(self):
@@ -95,6 +101,18 @@ class BBox:
 
     def as_tuple(self):
         return self.xmin, self.ymin, self.xmax, self.ymax
+
+    @property
+    def leaflet_bounds(self):
+        """Retorna este bbox no formato LeafLet. https://leafletjs.com/reference-1.7.1.html#latlngbounds"""
+        return (self.ymin, self.xmin), (self.ymax, self.xmax)
+
+
+    @property
+    def centro(self):
+        return (self.xmax + self.xmin) / 2, (self.ymax + self.ymin) / 2
+
+
 
 
 class RasterDefinition:
