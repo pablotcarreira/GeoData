@@ -107,12 +107,9 @@ class BBox:
         """Retorna este bbox no formato LeafLet. https://leafletjs.com/reference-1.7.1.html#latlngbounds"""
         return (self.ymin, self.xmin), (self.ymax, self.xmax)
 
-
     @property
     def centro(self):
         return (self.xmax + self.xmin) / 2, (self.ymax + self.ymin) / 2
-
-
 
 
 class RasterDefinition:
