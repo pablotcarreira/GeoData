@@ -62,7 +62,7 @@ class BBox:
         src_srs.ImportFromWkt(self._wkt_srs)
 
         # Compatibilidade com gdal 3.
-        if int(gdal.__version__) >= 3:
+        if int(gdal.__version__.split('.')[0]) >= 3:
             src_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
         dst_srs = create_osr_srs(new_srs)
