@@ -7,7 +7,7 @@ from geodata.srs_utils import create_osr_srs
 
 try:
     # noinspection PyUnresolvedReferences
-    from osgeo import ogr, osr
+    from osgeo import ogr, osr, gdal
 except ImportError:
     warn("OGR not available")
 
@@ -61,16 +61,11 @@ class BBox:
         src_srs = osr.SpatialReference()
         src_srs.ImportFromWkt(self._wkt_srs)
 
-        if isinstance(new_srs, osr.SpatialReference):
-            dst_srs = new_srs
-        else:
-            dst_srs = osr.SpatialReference()
-            if isinstance(new_srs, str):
-                dst_srs.ImportFromWkt(new_srs)
-            elif isinstance(new_srs, int):
-                dst_srs.ImportFromEPSG(new_srs)
+        # Compatibilidade com gdal 3.
+        if int(gdal.__version__) >= 3:
+            src_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
-        # FIXME: Só funciona quando converte de wgs84/lat-lon para outra coisa.
+        dst_srs = create_osr_srs(new_srs)
         transform = osr.CoordinateTransformation(src_srs, dst_srs)
         new_geom = transform.TransformPoints(self._geometry)
         # Get bbox from new geom:
