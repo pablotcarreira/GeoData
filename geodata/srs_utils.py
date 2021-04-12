@@ -1,7 +1,6 @@
 # Pablo Carreira - 29/06/17
-from typing import Union
-
 from osgeo import osr
+from typing import Union
 
 
 def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str]) -> osr.SpatialReference:
@@ -32,4 +31,4 @@ def find_utm_epsg(longitude, latitude):
     :param longitude:
     :return:
     """
-    return 32700 - int((45+latitude)/90)*100+int((183+longitude)/6)
+    return 32700 - round((45+latitude)/90)*100+round((183+longitude)/6)
