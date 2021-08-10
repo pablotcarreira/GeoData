@@ -1,5 +1,6 @@
 # Pablo Carreira - 29/06/17
-from osgeo import osr
+from osgeo import osr, __version__
+
 from typing import Union
 
 
@@ -17,7 +18,7 @@ def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str], tradicional=Tr
         srs.ImportFromWkt(in_srs)
     else:
         raise ValueError("Formato srs desconhecido.")
-    if int(osgeo.__version__[0]) >= 3 and tradicional:
+    if int(__version__[0]) >= 3 and tradicional:
         srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
     return srs
 
