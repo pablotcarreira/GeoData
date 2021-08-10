@@ -38,3 +38,9 @@ def test_bbox_transform_srs():
 
 if __name__ == '__main__':
     test_bbox_transform_srs()
+
+
+
+imagem.get_bbox_position_within_image(BBox)
+
+

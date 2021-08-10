@@ -3,7 +3,7 @@ from osgeo import osr
 from typing import Union
 
 
-def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str]) -> osr.SpatialReference:
+def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str], tradicional=True) -> osr.SpatialReference:
     """Creates an osr.SpatialReference object either from an EPSG code or a Wkt.
     If the srs is already an osr.SpatialReference, return a clone.
     """
@@ -17,6 +17,8 @@ def create_osr_srs(in_srs: Union[osr.SpatialReference, int, str]) -> osr.Spatial
         srs.ImportFromWkt(in_srs)
     else:
         raise ValueError("Formato srs desconhecido.")
+    if int(osgeo.__version__[0]) >= 3 and tradicional:
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
     return srs
 
 
